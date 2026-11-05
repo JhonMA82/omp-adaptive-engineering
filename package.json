@@ -1,0 +1,12 @@
+{
+  "name": "adaptive-engineering",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Adaptive engineering policy and N3 procedure for Oh My Pi, packaged as an optional OMP plugin.",
+  "license": "MIT",
+  "type": "module",
+  "omp": {
+    "version": "0.1.0",
+    "description": "Adaptive Engineering: choose N0-N3 rigor, use native OMP capabilities, preserve human decisions."
+  }
+}
