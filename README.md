@@ -60,7 +60,7 @@ Cuando el plugin está desactivado, OMP no descubre su regla ni su skill: no hay
 
 ## Actualización
 
-El plugin está enlazado desde el repositorio local. Actualizar es editar o hacer `git pull` en `~/Dev/omp-adaptive-engineering`; la siguiente sesión carga el contenido nuevo.
+El plugin está enlazado desde el repositorio local, que está inicializado con git y no tiene remoto. Actualizar es editar los archivos o hacer `git pull` si más adelante se añade un remoto; la siguiente sesión carga el contenido nuevo.
 
 Si cambia `package.json` o la versión, volver a enlazar para refrescar el estado:
 

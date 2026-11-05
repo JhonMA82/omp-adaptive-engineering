@@ -116,7 +116,7 @@ Give the reviewer:
 - the verification evidence;
 - the known limitations.
 
-The reviewer reports findings; the agent verifies them. Do not treat reviewer approval as human approval. Stop after three fix rounds; if the issue does not converge, park the task or rethink the approach.
+The reviewer reports findings; the agent verifies them. Do not treat reviewer approval as human approval. Stop after three fix rounds; if the issue does not converge, park the task or rethink the approach. If the review does not complete, record it as **not run**; never claim that findings were addressed.
 
 ## 9. Decisions and close-out
 

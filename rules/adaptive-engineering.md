@@ -143,6 +143,7 @@ Use OMP's tools instead of building equivalents:
 - Verification scope must match claim scope. A passing unit test does not prove an end-to-end feature.
 - Prefer observed output over reasoning about what should happen.
 - Report only checks you actually exercised.
+- Do not claim a review, approval, or check that did not finish; record it as not run.
 - Do not fabricate approvals, tool results, or repository state.
 
 ## Do not
