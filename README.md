@@ -112,7 +112,7 @@ Feature, bug complejo o cambio de varios componentes que requiere investigación
 
 Seguridad, autenticación, secretos, pagos, datos, migraciones, CI, infraestructura, APIs públicas, cambios irreversibles, requisitos contradictorios o decisiones de producto acopladas. Lee `skill://asdd-lite`, escribe una spec compacta con las cuatro preguntas, criterios observables y fuera de alcance, planifica por fases, ejecuta con autonomía, verifica cada fase, revisa de forma independiente cuando corresponde y registra decisiones.
 
-El mínimo N3 es spec + verificación observada + decisiones cuando hagan falta. No es una cadena de cinco artefactos.
+La spec se guarda en `docs/specs/<slug>.md` (o `SPEC.md` si el proyecto no tiene convención de docs). El mínimo N3 es spec + verificación observada + decisiones cuando hagan falta. No es una cadena de cinco artefactos.
 
 ## Decisiones y autonomía
 
