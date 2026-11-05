@@ -30,6 +30,8 @@ Desde cualquier directorio:
 omp plugin link ~/Dev/omp-adaptive-engineering
 ```
 
+`omp plugin install ~/Dev/omp-adaptive-engineering` también funciona: para una ruta local, OMP la enruta al mismo mecanismo de link.
+
 Verificar:
 
 ```bash
