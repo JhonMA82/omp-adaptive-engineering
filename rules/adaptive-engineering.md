@@ -75,7 +75,7 @@ Read `skill://asdd-lite` before writing the specification. If the skill is unava
 3. Identify alternatives, dependencies, and rollback options.
 4. Surface contradictions and risks; do not silently pick a winner.
 5. Define observable acceptance criteria.
-6. Write a compact specification **before editing source**: what the user can do, what result they get, what it must respect, how it proves it, and what is out of scope. A one-paragraph specification is acceptable; skipping it is not.
+6. Write a compact specification **before editing source** at `docs/specs/<slug>.md` (or `SPEC.md` when the project has no docs convention): what the user can do, what result they get, what it must respect, how it proves it, and what is out of scope. A one-paragraph specification is acceptable; skipping it is not.
 7. Plan by phases, each with an observable check.
 8. Execute autonomously within the authorized scope.
 9. Verify each phase.

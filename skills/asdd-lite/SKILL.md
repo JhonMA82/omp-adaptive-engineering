@@ -9,6 +9,8 @@ This is the N3 procedure for Adaptive Engineering. Do not load it for N0, N1, or
 
 ## 1. Establish the contract
 
+Write the specification to `docs/specs/<slug>.md`; use `SPEC.md` at the repository root only when the project has no docs convention.
+
 Before writing anything, read:
 
 - the literal request and its constraints;
