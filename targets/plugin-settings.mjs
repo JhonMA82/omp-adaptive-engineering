@@ -75,3 +75,35 @@ export function readSettings({ lockPath, projectPaths = [] } = {}) {
     dangerMode: DANGER_MODES.includes(mode) ? mode : DEFAULTS.dangerMode,
   };
 }
+
+/** The profile as the three cases the mode distinguishes. Anything that is not exactly `technical`
+ * is treated as non-technical: the safe side, because it is the one that never loosens a guard. */
+export function profileFrom(raw) {
+  if (typeof raw !== "string" || raw.trim() === "") return null;
+  return raw.trim().toLowerCase() === "technical" ? "technical" : "non-technical";
+}
+
+/** Whether a guard runs. A missing or malformed value reads as on. */
+export function guardEnabled(settings, name) {
+  return settings?.guards?.[name] !== false;
+}
+
+/**
+ * `danger.mode` applied to the guard's verdict. `auto` changes nothing; `deny` hardens any verdict;
+ * `ask` only relaxes a denial where the project has no non-technical profile to protect.
+ */
+export function applyDangerMode(mode, verdict, profile) {
+  if (!verdict || verdict.decision === "allow") return verdict;
+  if (mode === "deny") return { ...verdict, decision: "deny" };
+  if (mode === "ask" && verdict.decision === "deny" && profile !== "non-technical") {
+    return { ...verdict, decision: "ask" };
+  }
+  return verdict;
+}
+
+/** One line naming the guards that are off, or `null` when every guard is on. */
+export function startupNotice(settings) {
+  const off = GUARD_NAMES.filter((name) => settings?.guards?.[name] === false);
+  if (off.length === 0) return null;
+  return `rsc: guards apagados — ${off.join(", ")}. Se cambian en Settings → Plugins.`;
+}
