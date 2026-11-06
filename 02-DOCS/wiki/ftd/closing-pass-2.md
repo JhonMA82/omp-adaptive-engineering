@@ -98,7 +98,7 @@ Fuera:
 - **`danger.mode` matrix.** `node --test tests/danger-mode-matrix.test.js` → 5/5, and the adapter
   suite covers UI approval, UI decline, no UI, a non-technical profile never relaxed, `deny`
   hardening and `guards.danger` off.
-- **Full suite.** `node --test tests/*.test.js` → **234 tests, 233 pass, 1 skipped, 0 fail** (the
+- **Full suite.** `node --test tests/*.test.js` → **235 tests, 234 pass, 1 skipped, 0 fail** (the
   skip is the upstream materialized-copy drift test when `.rsc/danger-guard.mjs` is absent).
 - **Real OMP 18.17.0.** A print session's `rm -rf /tmp/omp-rsc-should-not-exist` was blocked with
   the guard's verbatim `BLOCKED for a non-technical user` message and the target survived. `/adaptive-status`'s

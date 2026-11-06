@@ -390,7 +390,7 @@ contra OMP **18.17.0**.
 | F-03 estado `.rsc` en worktrees | Cerrado como contrato | Opt-outs de proyecto se hidratan una vez; sello/ledger/nudge/memoria por checkout, documentado y probado |
 | F-04 cleanup/knowledge en skills | Resuelto | `worktrees` y `ftd` describen la limpieza manual; no queda promesa de hooks no portados |
 | F-05 tools `xd://` | Resuelto como decisión + documentación | Se mantiene `discoverable`; README y skills explican `read`/`write xd://` |
-| F-06 README obsoleto | Resuelto | Cuatro guards, 234 tests, `suggest` adaptado, contrato de estado actualizado |
+| F-06 README obsoleto | Resuelto | Cuatro guards, 235 tests, `suggest` adaptado, contrato de estado actualizado |
 | F-07 typecheck | Resuelto | `tsconfig.json` incluye `src/**/*.ts` y `tests/**/*.ts`; `bun run typecheck` = 0 errores |
 | F-08 nudge en write fallido | Resuelto | `if (event.isError) return;` + test |
 | F-09 validación de `window` | Resuelto | Schema `int().min(0)` + guard runtime; test de `-1`, `1.5` y `0` |
@@ -411,12 +411,15 @@ contra OMP **18.17.0**.
   worktree de un subproyecto mapea su contraparte en `main` para leer las decisiones de proyecto.
 - **F-05 — se mantiene `discoverable`.** Los cinco tools se usan vía `xd://`; añadir `essential`
   queda como una alternativa si un modelo débil no los descubre, no como necesidad del port.
+- **Autopilot con una sola llave.** `sdd.execution_mode: automatic` es el único switch; `specify` ya
+  no menciona `sdd.autopilot` y `sdd-init` declara el contrato. `tests/sdd-config.test.js` lo fija
+  para que no reaparezca la llave duplicada.
 
 ### Verificación final
 
 ```text
 node --test tests/*.test.js
-tests 234 · pass 233 · fail 0 · skipped 1
+tests 235 · pass 234 · fail 0 · skipped 1
 
 bun tests/adapter.test.ts
 adapter: status, session_switch injection and error paths pass

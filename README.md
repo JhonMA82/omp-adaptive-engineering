@@ -317,7 +317,7 @@ bun run typecheck             # TypeScript barrier
 
 Final run of this closing pass:
 
-- `node --test tests/*.test.js` → **234 tests, 233 pass, 1 skipped, 0 fail**.
+- `node --test tests/*.test.js` → **235 tests, 234 pass, 1 skipped, 0 fail**.
 - `bun tests/adapter.test.ts` → all adapter checks pass, including `/adaptive-status`,
   `session_switch` for `new`/`resume`/`fork`, the error-path checks, the profile × mode matrix and
   the real-worktree state contract.

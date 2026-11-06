@@ -40,7 +40,7 @@ If, having looked, there is no real objection, **say so in one line and move on 
 **Offer autopilot once, right here.** At this boundary, propose how to run the rest of the chain:
 > *"¿Quieres que lo lleve hasta el final yo solo — spec → plan → código → verify, parando solo si algo es ambiguo — o prefieres que pare a que apruebes en cada fase?"*
 
-A **yes engages autopilot** (`skill://asdd`): you still write the spec and every artifact, but you auto-advance through the phases without re-asking — that up-front yes is the approval that satisfies the hard gate above, for the whole run. A **no** (or silence) keeps the default gated flow: write the spec, hand to `clarify`/`plan`, stop for approval before code. Either way the spec gets written; autopilot only changes whether you pause *between* phases — and it still stops for genuine ambiguity, hard failures, or destructive/outward actions (ship still confirms). If `sdd.autopilot: true` in config, autopilot is the default — still surface it once.
+A **yes engages autopilot** (`skill://asdd`): you still write the spec and every artifact, but you auto-advance through the phases without re-asking — that up-front yes is the approval that satisfies the hard gate above, for the whole run. A **no** (or silence) keeps the default gated flow: write the spec, hand to `clarify`/`plan`, stop for approval before code. Either way the spec gets written; autopilot only changes whether you pause *between* phases — and it still stops for genuine ambiguity, hard failures, or destructive/outward actions (ship still confirms). If `sdd.execution_mode: automatic` in config, autopilot is the default — still surface it once.
 
 ## The one rule that defines this skill
 
