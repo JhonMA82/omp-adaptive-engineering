@@ -32,8 +32,12 @@ test("auto leaves the verdict untouched", () => {
 });
 
 test("deny turns an ask into a deny and leaves allow alone", () => {
-  assert.equal(applyDangerMode("deny", { decision: "ask", reason: "r" }, "technical").decision, "deny");
-  assert.equal(applyDangerMode("deny", { decision: "deny", reason: "r" }, null).decision, "deny");
+  const rewritten = applyDangerMode("deny", { decision: "ask", reason: "r" }, "technical");
+  assert.equal(rewritten.decision, "deny");
+  assert.equal(rewritten.rewritten, true, "a flipped verdict must not show the ask reason");
+  const already = applyDangerMode("deny", { decision: "deny", reason: "r" }, null);
+  assert.equal(already.decision, "deny");
+  assert.equal(already.rewritten, undefined, "an unchanged verdict keeps its own reason");
   assert.equal(applyDangerMode("deny", { decision: "allow" }, "technical").decision, "allow");
 });
 
@@ -42,7 +46,9 @@ test("ask never loosens a non-technical profile", () => {
 });
 
 test("ask applies where the profile would ask or where there is none", () => {
-  assert.equal(applyDangerMode("ask", { decision: "deny", reason: "r" }, null).decision, "ask");
+  const relaxed = applyDangerMode("ask", { decision: "deny", reason: "r" }, null);
+  assert.equal(relaxed.decision, "ask");
+  assert.equal(relaxed.rewritten, true, "a deny reason must not appear in a confirmation dialog");
   assert.equal(applyDangerMode("ask", { decision: "deny", reason: "r" }, "technical").decision, "ask");
   assert.equal(applyDangerMode("ask", { decision: "allow" }, null).decision, "allow");
 });

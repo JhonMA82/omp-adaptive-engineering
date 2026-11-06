@@ -6,6 +6,8 @@ export interface DangerVerdict {
   decision: "allow" | "deny" | "ask";
   why?: string;
   reason?: string;
+  /** Set when `danger.mode` changed the decision and the original reason no longer describes it. */
+  rewritten?: boolean;
 }
 
 export interface DangerModule {

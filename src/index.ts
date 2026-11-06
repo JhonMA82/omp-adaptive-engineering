@@ -135,7 +135,7 @@ export default async function adaptiveEngineering(pi: ExtensionAPI) {
       const root = projectRoot(cwd);
       settingsSnapshot = settings.readSettings({
         lockPath: settings.resolveLockPath({ agentDir }),
-        projectPaths: [join(root, ".omp", "plugin-overrides.json"), join(root, ".pi", "plugin-overrides.json")],
+        projectPaths: [join(root, ".omp", "plugin-overrides.json")],
       });
     } catch {
       settingsSnapshot = settings.DEFAULTS;
@@ -166,18 +166,24 @@ export default async function adaptiveEngineering(pi: ExtensionAPI) {
   };
 
   // ---- lifecycle: the always-on body and the per-turn lane gate -----------------
+  const announceGuards = (): void => {
+    const notice = settings.startupNotice(settingsSnapshot);
+    if (!notice) return;
+    pi.sendMessage(
+      { customType: "rsc-guards-off", content: notice, display: true, attribution: "agent" },
+      { deliverAs: "nextTurn", triggerTurn: false },
+    );
+  };
+
   pi.on("session_start", async (_event, ctx) => {
     refreshSettings(ctx.cwd);
     injectSuggest(ctx);
-    const notice = settings.startupNotice(settingsSnapshot);
-    if (notice) {
-      pi.sendMessage(
-        { customType: "rsc-guards-off", content: notice, display: true, attribution: "agent" },
-        { deliverAs: "nextTurn", triggerTurn: false },
-      );
-    }
+    announceGuards();
   });
-  pi.on("session_switch", async (_event, ctx) => refreshSettings(ctx.cwd));
+  pi.on("session_switch", async (_event, ctx) => {
+    refreshSettings(ctx.cwd);
+    announceGuards();
+  });
   pi.on("session_compact", async (_event, ctx) => injectSuggest(ctx, true));
 
   pi.on("before_agent_start", async (event, ctx) => {
@@ -223,9 +229,13 @@ export default async function adaptiveEngineering(pi: ExtensionAPI) {
         danger.evaluateDanger(root, command),
         settings.profileFrom(danger.technicalLevel(root)),
       );
-      if (dangerVerdict.decision === "deny") return { block: true, reason: translate(dangerVerdict.reason) };
+      const reason = dangerVerdict.rewritten
+        ? dangerVerdict.decision === "deny"
+          ? `rsc: danger.mode = deny blocks this command — ${dangerVerdict.why ?? "it cannot be undone"}. It was not run.`
+          : `rsc: danger.mode = ask needs your confirmation — ${dangerVerdict.why ?? "it cannot be undone"}.`
+        : translate(dangerVerdict.reason);
+      if (dangerVerdict.decision === "deny") return { block: true, reason };
       if (dangerVerdict.decision === "ask") {
-        const reason = translate(dangerVerdict.reason);
         if (!ctx.hasUI) {
           return {
             block: true,

@@ -94,9 +94,14 @@ export function guardEnabled(settings, name) {
  */
 export function applyDangerMode(mode, verdict, profile) {
   if (!verdict || verdict.decision === "allow") return verdict;
-  if (mode === "deny") return { ...verdict, decision: "deny" };
+  // `rewritten` tells the adapter the reason was written for the opposite decision and must not be
+  // shown verbatim: an "ask" reason under a deny, or a "BLOCKED" reason in a confirmation dialog,
+  // is a lie about what is happening.
+  if (mode === "deny" && verdict.decision === "ask") {
+    return { ...verdict, decision: "deny", rewritten: true };
+  }
   if (mode === "ask" && verdict.decision === "deny" && profile !== "non-technical") {
-    return { ...verdict, decision: "ask" };
+    return { ...verdict, decision: "ask", rewritten: true };
   }
   return verdict;
 }

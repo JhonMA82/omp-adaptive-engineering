@@ -7,6 +7,7 @@
  */
 import assert from "node:assert/strict";
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import adaptiveEngineering from "../src/index.ts";
@@ -308,3 +309,82 @@ const denied = await runBash(destructive, approving);
 assert.ok(denied?.block === true, "deny mode blocks what the profile would only ask about");
 
 console.log("adapter: settings snapshot, guard switches, danger mode and notice");
+
+// ---- reference battery: branch and ship switches on real repositories --------
+const git = (cwd: string, ...args: string[]) =>
+  spawnSync("git", args, { cwd, encoding: "utf8", windowsHide: true });
+
+const makeRepo = (name: string): string => {
+  const dir = join(settingsRoot, "repos", name);
+  mkdirSync(dir, { recursive: true });
+  git(dir, "init", "-b", "main");
+  git(dir, "config", "user.email", "test@example.com");
+  git(dir, "config", "user.name", "Test");
+  writeFileSync(join(dir, "a.txt"), "a");
+  git(dir, "add", ".");
+  git(dir, "commit", "-m", "📝 init");
+  return dir;
+};
+
+const branchRepo = makeRepo("branch");
+mkdirSync(join(branchRepo, ".rsc"), { recursive: true });
+writeFileSync(join(branchRepo, ".rsc", ".no-trunk-open"), "");
+const branchCtx = settingsContext({ cwd: branchRepo });
+const commitOnTrunk = 'git commit -m "📝 prueba"';
+
+writeSettings({});
+await startSession();
+assert.ok((await runBash(commitOnTrunk, branchCtx))?.block === true, "branch guard blocks a commit on the closed trunk");
+
+writeSettings({ "guards.branch": false });
+await startSession();
+assert.equal(await runBash(commitOnTrunk, branchCtx), undefined, "guards.branch off lets the same commit through");
+
+const shipRepo = makeRepo("ship");
+git(shipRepo, "switch", "-c", "feat/x");
+writeFileSync(join(shipRepo, "b.txt"), "b");
+const shipCtx = settingsContext({ cwd: shipRepo });
+const leaveBranch = "git switch main";
+
+writeSettings({});
+await startSession();
+assert.ok((await runBash(leaveBranch, shipCtx))?.block === true, "ship guard blocks leaving a dirty feature branch");
+
+writeSettings({ "guards.ship": false });
+await startSession();
+assert.equal(await runBash(leaveBranch, shipCtx), undefined, "guards.ship off lets the branch be left");
+
+// session_switch opens a new session too: the snapshot refreshes and the notice must follow it.
+writeSettings({ "guards.ship": false });
+const beforeSwitch = notices().length;
+await handlers.get("session_switch")!({ type: "session_switch", reason: "new" }, settingsContext());
+assert.equal(notices().length, beforeSwitch + 1, "session_switch announces the disabled guards");
+
+// A verdict rewritten by danger.mode must not show the reason written for the opposite decision.
+writeFileSync(profile, "technical_level: technical\n");
+writeSettings({ "danger.mode": "deny" });
+await startSession();
+const denyReason = (await runBash(destructive, approving))?.reason ?? "";
+assert.match(denyReason, /danger\.mode = deny/);
+assert.doesNotMatch(denyReason, /confirms it/);
+
+const noProfileRepo = makeRepo("noprofile");
+let confirmReason = "";
+const capturing = settingsContext({
+  cwd: noProfileRepo,
+  hasUI: true,
+  ui: {
+    confirm: async (_title: string, reason: string) => {
+      confirmReason = reason;
+      return true;
+    },
+    notify: () => {},
+  },
+});
+writeSettings({ "danger.mode": "ask" });
+await startSession();
+assert.equal(await runBash(destructive, capturing), undefined, "ask mode lets an approved command run when there is no profile");
+assert.match(confirmReason, /danger\.mode = ask/);
+assert.doesNotMatch(confirmReason, /BLOCKED/, "the confirmation must not carry the denial text");
+
+console.log("adapter: reference battery — branch and ship switches");
