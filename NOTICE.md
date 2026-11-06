@@ -34,6 +34,11 @@ where the original test invoked the RSC CLI.
 | `targets/agents.js` (definitions) | `agents/*.md` | Agent bodies preserved; `model:` pins removed so OMP’s model selection applies. |
 | 28 `skills/*/SKILL.md` + references/scripts | `skills/` | Content preserved; runtime-specific commands and relative skill links adapted for OMP. See the final port report and `README.md`. |
 
+One deliberate addition to the ported skills: `skills/tasks/SKILL.md` and `skills/implement/SKILL.md`
+now instruct the agent to mirror the task table into OMP's `todo` tool, and to mark each task as it
+opens and closes. Upstream leaves that to the runtime's own harness; OMP does not push a todo list,
+so the port asks explicitly. The rest of both files is upstream.
+
 `targets/plugin-settings.mjs` is new code with no upstream counterpart: it reads the guard
 switches and the danger mode from OMP's plugin settings, and gates the guards accordingly.
 `src/index.ts`, `src/rsc-boundary.ts` and `src/sello-tool.mjs` are integration code written for OMP.

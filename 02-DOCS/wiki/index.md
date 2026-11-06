@@ -23,3 +23,11 @@ Workspace control plane: user profile and harness decisions.
 | Article | Summary | Updated | Score |
 |---------|---------|---------|-------|
 | [Perfil de usuario](harness/user-profile.md) | Registro técnico y contexto de trabajo (personal, no se commitea) | 2026-11-06 | — |
+
+## ftd
+
+Feature documents for small authorised changes.
+
+| Article | Summary | Updated | Score |
+|---------|---------|---------|-------|
+| [FTD — Checklist vivo en la TUI](ftd/todo-progress.md) | El flujo espeja su tabla de tareas en la herramienta `todo` | 2026-11-06 | — |
