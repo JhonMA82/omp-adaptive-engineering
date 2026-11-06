@@ -36,6 +36,11 @@ interface CapturedCommand {
 
 type Handler = (event: unknown, ctx: FakeContext) => Promise<unknown> | unknown;
 
+const settingsRoot = mkdtempSync(join(tmpdir(), "rsc-adapter-settings-"));
+mkdirSync(join(settingsRoot, ".git"), { recursive: true });
+mkdirSync(join(settingsRoot, "plugins"), { recursive: true });
+const settingsLock = join(settingsRoot, "plugins", "omp-plugins.lock.json");
+
 const chain = new Proxy(function () {}, { get: () => chain, apply: () => chain }) as unknown as Chainable;
 const z = new Proxy({}, { get: () => chain }) as unknown as Chainable;
 
@@ -46,6 +51,7 @@ const messages: unknown[] = [];
 
 const pi = {
   zod: z,
+  pi: { getAgentDir: () => settingsRoot },
   on: (event: string, handler: Handler) => handlers.set(event, handler),
   registerTool: (definition: CapturedTool) => tools.set(definition.name, definition),
   registerCommand: (name: string, definition: CapturedCommand) => commands.set(name, definition),
@@ -226,3 +232,79 @@ assert.equal(consolidated.unique, 1);
 assert.equal(consolidated.findings[0].lenses.length, 2);
 
 console.log("adapter: rsc_review_consolidate merges lens reports");
+
+// ---- plugin settings: snapshot at session start, gating, mode, notice --------
+const settingsContext = (overrides: Partial<FakeContext> = {}): FakeContext => ({
+  cwd: settingsRoot,
+  hasUI: false,
+  agent: { kind: "main", id: "s1", name: "s1", depth: 0 },
+  sessionManager: { getSessionId: () => "settings-session" },
+  ui: { confirm: async () => true, notify: () => {} },
+  ...overrides,
+});
+
+const writeSettings = (values: Record<string, unknown>) =>
+  writeFileSync(
+    settingsLock,
+    JSON.stringify({ plugins: {}, settings: { "adaptive-engineering": values } }),
+  );
+
+const startSession = async () => {
+  await handlers.get("session_start")!({ type: "session_start" }, settingsContext());
+};
+
+const runBash = (command: string, ctx: FakeContext = settingsContext()) =>
+  handlers.get("tool_call")!(
+    { type: "tool_call", toolCallId: "settings", toolName: "bash", input: { command } },
+    ctx,
+  ) as Promise<{ block?: boolean; reason?: string } | undefined>;
+
+// An interactive session that approves: distinguishes "asked and allowed" from "denied outright".
+const approving = settingsContext({ hasUI: true, ui: { confirm: async () => true, notify: () => {} } });
+
+const notices = () =>
+  messages.filter((message) => (message as { customType?: string })?.customType === "rsc-guards-off");
+
+const noticesBefore = notices().length;
+writeSettings({});
+await startSession();
+assert.equal(notices().length, noticesBefore, "no notice when every guard is on");
+
+writeSettings({ "guards.gitmoji": false });
+await startSession();
+const notice = notices().at(-1) as { content?: string } | undefined;
+assert.ok(notice && String(notice.content).includes("gitmoji"), "the notice names the disabled guard");
+
+const commit = 'git commit -m "fix: no emoji"';
+assert.equal(await runBash(commit), undefined, "gitmoji guard off lets the commit through");
+
+writeSettings({});
+await startSession();
+const backOn = await runBash(commit);
+assert.ok(backOn?.block === true, "turning the guard back on rejects it in the next session");
+
+writeSettings({ "guards.gitmoji": false });
+const frozen = await runBash(commit);
+assert.ok(frozen?.block === true, "a change mid-session does not apply until the next session");
+
+const profile = join(settingsRoot, "02-DOCS", "wiki", "harness", "user-profile.md");
+mkdirSync(join(settingsRoot, "02-DOCS", "wiki", "harness"), { recursive: true });
+const destructive = "git reset --hard HEAD";
+
+writeFileSync(profile, "technical_level: non-technical\n");
+writeSettings({ "danger.mode": "ask" });
+await startSession();
+const loosened = await runBash(destructive, approving);
+assert.ok(loosened?.block === true, "ask mode never loosens a non-technical profile");
+
+writeFileSync(profile, "technical_level: technical\n");
+writeSettings({ "danger.mode": "auto" });
+await startSession();
+assert.equal(await runBash(destructive, approving), undefined, "auto asks a technical profile, and the approval allows it");
+
+writeSettings({ "danger.mode": "deny" });
+await startSession();
+const denied = await runBash(destructive, approving);
+assert.ok(denied?.block === true, "deny mode blocks what the profile would only ask about");
+
+console.log("adapter: settings snapshot, guard switches, danger mode and notice");

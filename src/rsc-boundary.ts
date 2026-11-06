@@ -10,6 +10,7 @@ export interface DangerVerdict {
 
 export interface DangerModule {
   evaluateDanger(root: string, command: string): DangerVerdict;
+  technicalLevel(root: string): string | null;
 }
 
 export interface BranchModule {
