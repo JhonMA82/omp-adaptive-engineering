@@ -33,15 +33,27 @@ function readJson(path) {
 }
 
 /**
- * The lock file OMP writes. The plugins directory sits beside the agent directory, except under the
- * XDG layout where it lives inside it — probe both, first hit wins, `null` when there is none.
+ * The lock file OMP writes. OMP resolves the plugins directory through its own dirs resolver, which
+ * on Linux redirects to `$XDG_DATA_HOME/omp/plugins` once that root exists, and otherwise keeps it
+ * beside the agent directory. Probe in OMP's own precedence — XDG first, then beside the agent dir,
+ * then its parent — and return `null` when none exists.
  */
-export function resolveLockPath({ agentDir } = {}) {
-  if (!agentDir || typeof agentDir !== "string") return null;
-  for (const candidate of [
-    join(agentDir, "plugins", LOCK_NAME),
-    join(dirname(agentDir), "plugins", LOCK_NAME),
-  ]) {
+export function resolveLockPath({ agentDir, env = process.env } = {}) {
+  const candidates = [];
+
+  const xdgRoot = env?.XDG_DATA_HOME ? join(env.XDG_DATA_HOME, "omp") : null;
+  if (xdgRoot && process.platform === "linux" && existsSync(xdgRoot)) {
+    candidates.push(join(xdgRoot, "plugins", LOCK_NAME));
+  }
+
+  if (agentDir && typeof agentDir === "string") {
+    candidates.push(
+      join(agentDir, "plugins", LOCK_NAME),
+      join(dirname(agentDir), "plugins", LOCK_NAME),
+    );
+  }
+
+  for (const candidate of candidates) {
     if (existsSync(candidate)) return candidate;
   }
   return null;

@@ -141,7 +141,7 @@ export interface SettingsModule {
   DEFAULTS: PluginSettings;
   GUARD_NAMES: GuardName[];
   DANGER_MODES: DangerMode[];
-  resolveLockPath(input: { agentDir?: string | null }): string | null;
+  resolveLockPath(input: { agentDir?: string | null; env?: Record<string, string | undefined> }): string | null;
   readSettings(input: { lockPath?: string | null; projectPaths?: string[] }): PluginSettings;
   guardEnabled(settings: PluginSettings, name: GuardName): boolean;
   profileFrom(raw: unknown): DangerProfile;
