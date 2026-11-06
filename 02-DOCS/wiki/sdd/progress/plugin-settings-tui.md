@@ -89,3 +89,10 @@ Append-only. Newest last. Each entry: what was built, the evidence observed, and
 - **No ejecutado**: la revisión de rama completa (stage 5). Se puede lanzar cuando se pida.
 - El port sigue parcialmente sin trackear (`targets/`, `agents/`, `scripts/`, `skills/*`); los commits
   de estas ramas arrastraron parte de esos ficheros.
+
+## Revisión de cierre — 2026-11-06
+- veredicto inicial: CHANGES REQUESTED — 1 should-fix, 1 nit.
+- should-fix: `resolveLockPath` no miraba `$XDG_DATA_HOME/omp/plugins`, que es donde OMP escribe con
+  XDG activo. Corregido con candidato XDG primero y dos tests (con root XDG y sin él).
+- nit: el README prometía `.pi/`; eliminado.
+- fix: `1452b21`. Suite: 200 tests, 199 pasan, 0 fallan, 1 omitido.

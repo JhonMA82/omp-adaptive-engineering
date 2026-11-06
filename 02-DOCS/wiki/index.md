@@ -14,6 +14,7 @@ Spec-driven development artifacts: specs, constitution, plans, progress and deci
 | [Progress — Ajustes del plugin en la TUI de OMP](sdd/progress/plugin-settings-tui.md) | Evidencia por tarea, revisión y límites | 2026-11-06 | — |
 | [Verification — Ajustes del plugin en la TUI de OMP](sdd/verifications/plugin-settings-tui-2026-11-06.md) | Primera pasada: 14 criterios, uno pendiente de mirada humana | 2026-11-06 | — |
 | [Verification r2 — Ajustes del plugin en la TUI de OMP](sdd/verifications/plugin-settings-tui-2026-11-06-r2.md) | PASS: el render se verificó con captura | 2026-11-06 | — |
+| [Review — Ajustes del plugin en la TUI de OMP](sdd/reviews/plugin-settings-tui.md) | Cierre: 2 hallazgos, ambos corregidos | 2026-11-06 | — |
 | [SDD decisions](sdd/decisions.md) | Registro append-only de decisiones de alcance del ciclo SDD | 2026-11-06 | — |
 
 ## harness
