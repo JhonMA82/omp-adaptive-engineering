@@ -1,2 +1,5 @@
 # Personal, per-machine: the danger guard reads it, but a teammate's clone gets the safe default.
 02-DOCS/wiki/harness/user-profile.md
+
+# Local review ledger and session memory
+.rsc/
