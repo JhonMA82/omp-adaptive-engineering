@@ -105,7 +105,7 @@ Behaviour, in order of precedence:
 4. **Unreadable configuration falls back to the defaults.** A missing or malformed lock file leaves
    every guard on, and a guard never blocks a command because of its own settings error.
 
-A project can override any key in `.omp/plugin-overrides.json` (or `.pi/`), which wins over the
+A project can override any key in `.omp/plugin-overrides.json`, which wins over the
 global lock. That file is written by hand; the settings page only writes the global one.
 
 When at least one guard is off, the session opens with a single line naming it, so the state is

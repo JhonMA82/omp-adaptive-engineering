@@ -29,20 +29,42 @@ function pluginLock(settings) {
 test("resolveLockPath finds the lock under <agentDir>/plugins", () => {
   const agentDir = tmp();
   const expected = lockAt(agentDir, pluginLock({}));
-  assert.equal(resolveLockPath({ agentDir }), expected);
+  assert.equal(resolveLockPath({ agentDir, env: {} }), expected);
 });
 
-test("resolveLockPath falls back to <parent>/plugins when the agent dir is XDG-flattened", () => {
+test("resolveLockPath prefers OMP's XDG data directory when that root exists", () => {
+  const xdg = tmp();
+  mkdirSync(join(xdg, "omp", "plugins"), { recursive: true });
+  const expected = join(xdg, "omp", "plugins", "omp-plugins.lock.json");
+  writeFileSync(expected, JSON.stringify(pluginLock({})));
+  const agentDir = tmp();
+  lockAt(agentDir, pluginLock({ "guards.danger": false }));
+
+  assert.equal(
+    resolveLockPath({ agentDir, env: { XDG_DATA_HOME: xdg } }),
+    expected,
+    "the XDG store wins: that is where OMP writes once the root exists",
+  );
+});
+
+test("resolveLockPath ignores XDG when its omp root does not exist", () => {
+  const xdg = tmp();
+  const agentDir = tmp();
+  const expected = lockAt(agentDir, pluginLock({}));
+  assert.equal(resolveLockPath({ agentDir, env: { XDG_DATA_HOME: xdg } }), expected);
+});
+
+test("resolveLockPath falls back to <parent>/plugins when the plugins dir sits beside the agent dir", () => {
   const root = tmp();
   const agentDir = join(root, "omp");
   mkdirSync(agentDir, { recursive: true });
   const expected = lockAt(root, pluginLock({}));
-  assert.equal(resolveLockPath({ agentDir }), expected);
+  assert.equal(resolveLockPath({ agentDir, env: {} }), expected);
 });
 
-test("resolveLockPath returns null when neither candidate exists", () => {
-  assert.equal(resolveLockPath({ agentDir: join(tmp(), "missing") }), null);
-  assert.equal(resolveLockPath({ agentDir: null }), null);
+test("resolveLockPath returns null when nothing exists", () => {
+  assert.equal(resolveLockPath({ agentDir: join(tmp(), "missing"), env: {} }), null);
+  assert.equal(resolveLockPath({ agentDir: null, env: {} }), null);
 });
 
 test("readSettings returns the defaults with no lock and no overrides", () => {
