@@ -76,3 +76,16 @@ Append-only. Newest last. Each entry: what was built, the evidence observed, and
 ## Notes for whoever resumes
 - The working tree carried an uncommitted port when this branch started; several commits therefore contain pre-existing untracked files alongside this feature. Nothing from the port was modified by this change except `danger-guard.mjs` (one `export`).
 - No blocking decision queue entries. No `review-after` entries.
+
+## Cierre — 2026-11-06
+
+- **Feature cerrada.** `feat/plugin-settings-tui` en `a144312`; gate de verificación PASS (r2) con la
+  captura de la página. Sin entradas bloqueantes en la cola.
+- **Sin remoto**: no hay PR. Para aterrizar en `master`:
+  `git switch master && git merge --no-ff feat/plugin-settings-tui`
+- **Cambio hermano**: `feat/todo-progress` en `e3b2f27` — `tasks` e `implement` espejan la tabla en la
+  herramienta `todo`, más el FTD y su evidencia.
+  `git switch master && git merge --no-ff feat/todo-progress`
+- **No ejecutado**: la revisión de rama completa (stage 5). Se puede lanzar cuando se pida.
+- El port sigue parcialmente sin trackear (`targets/`, `agents/`, `scripts/`, `skills/*`); los commits
+  de estas ramas arrastraron parte de esos ficheros.
