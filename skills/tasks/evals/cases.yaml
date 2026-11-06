@@ -66,7 +66,7 @@ capability:
     must_include:
       - "Confirms the inputs first: plan, spec, AND constitution must exist; if the plan were missing it would STOP and route to `plan` rather than slice from intent."
       - "Reads technical_level from 02-DOCS/wiki/harness/user-profile.md and picks the register; the table is complete either way, and the chat adds only one line of why-this-slicing plus the risky tasks."
-      - "Emits sequential zero-padded stable IDs (T001, T002… — no hyphen, GitHub Spec Kit canon) with the seven well-formed fields: ID, a separate [P] marker field after the ID, imperative title, done-check, depends-on, a trace to the spec acceptance criterion it covers, and a risk forecast (tier 0/1/2 from `rsc_risk <expected paths>`, never guessed)."
+      - "Emits sequential zero-padded stable IDs (T001, T002… — no hyphen, GitHub Spec Kit canon) with the seven well-formed fields: ID, a separate [P] marker field after the ID, imperative title, done-check, depends-on, a trace to the spec acceptance criterion it covers, and a risk forecast (tier 0/1/2 from the `rsc_risk` tool with `paths: [<expected paths>]`, never guessed)."
       - "Every done-check is a LITERAL runnable command or checkable observation (e.g. `pytest tests/auth/test_login.py` green; `alembic upgrade head` applies; bad password → 401) — never 'login works'."
       - "Orders by dependency (migration/schema → data → service → API), so no task precedes what it depends on; marks `[P]` only on file/state-disjoint tasks and defaults to sequential when unsure."
       - "Uses TDD-shaped slicing: a failing-test task before its implementation task, whose done-check is 'the test that was red is now green'."

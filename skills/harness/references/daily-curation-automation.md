@@ -7,8 +7,9 @@ Improvement** (Maintenance Pass / Micro-Improve / Deep Improve) promoted to a
 timer, not only when asked.
 
 **Portable definition + Claude-Code reliability** (same pattern as the hooks): the
-spec below works on any assistant as a protocol; on Claude Code, wire a real daily
-cron via the `schedule` skill pointed at this prompt.
+spec below works on any assistant as a protocol. This OMP port installs no timer and no
+`PreCompact`/`SessionEnd` hook: run the prompt manually, or wire it in an external scheduler the
+project already has. The protocol is the part that travels.
 
 ## Purpose
 

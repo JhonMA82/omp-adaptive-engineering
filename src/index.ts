@@ -9,8 +9,11 @@
  * Upstream: https://github.com/ericrisco/rsc-harness @ 726aaf3 (v4.0.5), MIT.
  */
 import type { ExtensionAPI } from "@oh-my-pi/pi-coding-agent";
+// The package root also re-exports this as a type-only declaration, which TS rejects as a value
+// under `verbatimModuleSyntax`; the runtime barrel is the value-bearing path OMP documents.
+import { isToolCallEventType } from "@oh-my-pi/pi-coding-agent/extensibility/extensions";
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join, relative, resolve } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { loadRsc } from "./rsc-boundary.ts";
@@ -22,23 +25,49 @@ interface SuggestContext {
   agent?: { kind?: string };
 }
 
-const result = (value: string, details: Record<string, unknown> = {}) => ({
+const result = (value: string, details: unknown = {}) => ({
   content: [{ type: "text" as const, text: value }],
   details,
 });
 
-/** Nearest ancestor that owns RSC state, a git checkout or the 02-DOCS workspace. */
+/** A directory that declares itself a project to RSC, not merely a git checkout. */
+function hasProjectMarker(dir: string): boolean {
+  return (
+    existsSync(join(dir, ".rsc")) ||
+    existsSync(join(dir, ".rsc.json")) ||
+    existsSync(join(dir, "02-DOCS"))
+  );
+}
+
+/**
+ * The project inside the checkout this session works in. Upstream `resolveRoot` stops at git's
+ * toplevel; the port searches the ancestors *below* that ceiling first, so a workspace project with
+ * its own `.rsc/`/`.rsc.json`/`02-DOCS/` keeps its state and a linked worktree never reads the main
+ * checkout across the worktree boundary. When no marker exists, the checkout toplevel is the root.
+ * Without git, the previous nearest-marker walk (including `.git`) is the fallback.
+ */
 function projectRoot(cwd: string): string {
-  let dir = resolve(cwd);
+  const start = resolve(cwd);
+  const top = gitOut(start, ["rev-parse", "--show-toplevel"]);
+  if (top && top.trim()) {
+    const ceiling = resolve(top.trim());
+    let dir = start;
+    for (;;) {
+      if (hasProjectMarker(dir)) return dir;
+      if (dir === ceiling) return ceiling;
+      const up = dirname(dir);
+      if (up === dir) return ceiling;
+      // A symlinked cwd can leave the lexical tree; never walk past the checkout.
+      if (up !== ceiling && !up.startsWith(`${ceiling}${sep}`)) return ceiling;
+      dir = up;
+    }
+  }
+
+  let dir = start;
   for (;;) {
-    if (
-      existsSync(join(dir, ".rsc")) ||
-      existsSync(join(dir, ".rsc.json")) ||
-      existsSync(join(dir, "02-DOCS")) ||
-      existsSync(join(dir, ".git"))
-    ) return dir;
+    if (hasProjectMarker(dir) || existsSync(join(dir, ".git"))) return dir;
     const up = dirname(dir);
-    if (up === dir) return resolve(cwd);
+    if (up === dir) return start;
     dir = up;
   }
 }
@@ -52,7 +81,7 @@ function stripFrontmatter(markdown: string): string {
  * RSC's messages name the upstream CLI. The OMP port exposes the same operations as native
  * tools/commands, so the refusal must name the way out that actually exists here.
  */
-function translate(message: string): string {
+function translate(message: unknown): string {
   return String(message)
     .replace(/`?npx @ericrisco\/rsc sello ([^`\n]+)`?/g, (_m, rest) => `the \`rsc_sello\` tool (action: ${rest.trim().split(/\s+/)[0]})`)
     .replace(/`?npx @ericrisco\/rsc review consolidate`?/g, "the `rsc_review_consolidate` tool")
@@ -61,6 +90,8 @@ function translate(message: string): string {
     .replace(/`?npx @ericrisco\/rsc review escapes`?/g, "the `rsc_review_ledger` tool (action: escapes)")
     .replace(/`?npx @ericrisco\/rsc spec gate(?: <spec>)?`?/g, "the `rsc_spec_gate` tool")
     .replace(/`?npx @ericrisco\/rsc risk`?/g, "the `rsc_risk` tool")
+    .replace(/Pass --base <ref> or the paths themselves/g, "Pass the `base` parameter or the paths themselves")
+    .replace(/the `rsc_risk` tool <path…>/g, "the `rsc_risk` tool with `paths`")
     .replace(/`?npx @ericrisco\/rsc main unlock`?/g, "`/adaptive-main-unlock`")
     .replace(/`?npx @ericrisco\/rsc main lock`?/g, "`/adaptive-main-lock`")
     .replace(/`?npx @ericrisco\/rsc main status`?/g, "`/adaptive-status`")
@@ -114,21 +145,39 @@ export default async function adaptiveEngineering(pi: ExtensionAPI) {
     selloTool,
     trunk,
     settings,
+    sessionPeers,
+    stateRoots,
   } = await loadRsc();
 
   // ---- plugin settings: one snapshot per session --------------------------------
   // Read once at session start and frozen for the session's lifetime: a change made in Settings →
   // Plugins applies to the next session, never to the one in flight. No disk I/O on tool_call.
+  // OMP injects its own SDK namespace as `ExtensionAPI.pi`; no cast: the type is the package's.
+  const sdk = pi.pi;
+
   const agentDir = (() => {
     try {
-      const fn = (pi as unknown as { pi?: { getAgentDir?: () => string } })?.pi?.getAgentDir;
-      return typeof fn === "function" ? fn() : null;
+      return typeof sdk.getAgentDir === "function" ? sdk.getAgentDir() : null;
     } catch {
       return null;
     }
   })();
 
   let settingsSnapshot = settings.DEFAULTS;
+
+  /**
+   * A linked worktree starts with no `.rsc/` because it is untracked. Upstream hydrates the local
+   * markers from the committed declaration at install/sync time; this port does it once, at the
+   * session boundary, and only when the worktree has no state of its own yet. It never writes to
+   * the main checkout and never copies the sello, ledger, nudge or memory.
+   */
+  const inheritProjectDecisions = (cwd: string): void => {
+    try {
+      stateRoots.hydrateProjectDecisions(stateRoots.resolveRoots(cwd));
+    } catch {
+      // Fail open: a state-root problem must not stop a session.
+    }
+  };
 
   const refreshSettings = (cwd: string): void => {
     try {
@@ -176,12 +225,18 @@ export default async function adaptiveEngineering(pi: ExtensionAPI) {
   };
 
   pi.on("session_start", async (_event, ctx) => {
+    inheritProjectDecisions(ctx.cwd);
     refreshSettings(ctx.cwd);
     injectSuggest(ctx);
     announceGuards();
   });
   pi.on("session_switch", async (_event, ctx) => {
+    // /new, resume and fork all arrive here. The first switch into a fresh linked worktree is also
+    // the session boundary that receives its one-time project-decision markers.
+    inheritProjectDecisions(ctx.cwd);
     refreshSettings(ctx.cwd);
+    // alreadyHasSuggest keeps resume/fork from duplicating the body.
+    injectSuggest(ctx);
     announceGuards();
   });
   pi.on("session_compact", async (_event, ctx) => injectSuggest(ctx, true));
@@ -195,7 +250,9 @@ export default async function adaptiveEngineering(pi: ExtensionAPI) {
 
   // ---- guards: RSC's PreToolUse(Bash) hooks, in their original order ------------
   pi.on("tool_call", async (event, ctx) => {
-    if (event.toolName !== "bash") return;
+    // `event.toolName === "bash"` does not narrow OMP's union (CustomToolCallEvent.toolName is a
+    // bare string); the SDK's documented guard is what gives `event.input.command` its type.
+    if (!isToolCallEventType("bash", event)) return;
     const command = event.input.command;
     if (!command) return;
     const root = projectRoot(ctx.cwd);
@@ -213,6 +270,13 @@ export default async function adaptiveEngineering(pi: ExtensionAPI) {
       command,
       cwd,
       sessionId: ctx.sessionManager.getSessionId(),
+      // OMP's own sessions, by lease: RSC's rule B with OMP's memory instead of the unshipped journal.
+      peers: sessionPeers.createSessionPeers({
+        pi: sdk,
+        sessionDir: ctx.sessionManager.getSessionDir?.(),
+        sessionId: ctx.sessionManager.getSessionId(),
+        selfFile: ctx.sessionManager.getSessionFile?.(),
+      }),
     });
     if (branchReason) return { block: true, reason: translate(branchReason) };
 
@@ -251,6 +315,8 @@ export default async function adaptiveEngineering(pi: ExtensionAPI) {
   // ---- FTD nudge: once per session after the first code edit with no feature doc ----
   pi.on("tool_result", async (event, ctx) => {
     if (event.toolName !== "write" && event.toolName !== "edit") return;
+    // RSC's PostToolUse nudge ran only after a write that happened; OMP also reports failed writes.
+    if (event.isError) return;
     // Both edit/write inputs carry one of these optional path fields; the event union has no single view.
     const input = event.input as Record<string, unknown>;
     const raw = String(input?.path ?? input?.file_path ?? input?.notebook_path ?? "");
@@ -264,16 +330,20 @@ export default async function adaptiveEngineering(pi: ExtensionAPI) {
   });
 
   // ---- native tools: the RSC CLI operations that skills still call ---------------
+  // The schema lives in a const: TS 7 cannot infer a tool's parameter type through the
+  // async-factory call context when the schema is an inline literal (it falls back to `unknown`).
+  const riskParams = z.object({
+    base: z.string().optional().describe("Git ref to diff against; defaults to the trunk (origin/main, main, master)."),
+    paths: z.array(z.string()).optional().describe("Paths to classify directly. Omit to classify the working-tree diff."),
+    json: z.boolean().optional().describe("Return the structured assessment as JSON."),
+  });
+
   pi.registerTool({
     name: "rsc_risk",
     label: "RSC Risk",
     description:
       "Classify a change with RSC's deterministic risk table: tier 0 docs/copy, tier 1 ordinary code, tier 2 auth/billing/CI/migrations/secrets/harness. Pass paths to classify a forecast, or omit them to classify the diff against the trunk.",
-    parameters: z.object({
-      base: z.string().optional().describe("Git ref to diff against; defaults to the trunk (origin/main, main, master)."),
-      paths: z.array(z.string()).optional().describe("Paths to classify directly. Omit to classify the working-tree diff."),
-      json: z.boolean().optional().describe("Return the structured assessment as JSON."),
-    }),
+    parameters: riskParams,
     approval: "read",
     async execute(_id, params, _signal, _onUpdate, ctx) {
       const root = sello.resolveRoot(projectRoot(ctx.cwd));
@@ -283,10 +353,10 @@ export default async function adaptiveEngineering(pi: ExtensionAPI) {
       let from: string | null = null;
       if (!given.length) {
         const changed = riskLib.changedPaths(root, params.base ?? null);
-        if (!changed.ok) throw new Error(changed.message);
-        paths = changed.paths;
-        against = changed.base;
-        from = changed.from;
+        if (!changed.ok) throw new Error(translate(changed.message));
+        paths = changed.paths ?? [];
+        against = changed.base ?? null;
+        from = changed.from ?? null;
       }
       const texts = sello.changeText(root, from, paths);
       const assessment = {
@@ -297,14 +367,16 @@ export default async function adaptiveEngineering(pi: ExtensionAPI) {
     },
   });
 
+  const specGateParams = z.object({
+    paths: z.array(z.string()).optional().describe("Spec files to check. Omit to check the whole specs directory."),
+  });
+
   pi.registerTool({
     name: "rsc_spec_gate",
     label: "RSC Spec Gate",
     description:
       "Run RSC's spec exit gate over written specs: required sections, explicit open points, and status claims checked against the repository. No path checks every spec in 02-DOCS/wiki/sdd/specs.",
-    parameters: z.object({
-      paths: z.array(z.string()).optional().describe("Spec files to check. Omit to check the whole specs directory."),
-    }),
+    parameters: specGateParams,
     approval: "read",
     async execute(_id, params, _signal, _onUpdate, ctx) {
       const root = projectRoot(ctx.cwd);
@@ -357,21 +429,23 @@ export default async function adaptiveEngineering(pi: ExtensionAPI) {
     },
   });
 
+  const ledgerParams = z.object({
+    action: z.enum(["round", "panel", "record", "outcome", "stats", "escapes"]).describe("Ledger operation."),
+    task: z.string().optional().describe("Qualified task id <spec-slug>/<task> for round and panel."),
+    lenses: z.string().optional().describe("Comma-separated lenses for panel, e.g. correctness,security,tests."),
+    findingsJson: z.string().optional().describe("JSON array of findings, or an object with a findings array, for record."),
+    id: z.string().optional().describe("Finding id for outcome, e.g. L1."),
+    outcome: z.enum(["fixed", "false", "intentional", "irrelevant", "parked"]).optional().describe("Outcome value."),
+    since: z.string().optional().describe("Git ref for escapes."),
+    json: z.boolean().optional().describe("Return JSON where the original CLI offers it."),
+  });
+
   pi.registerTool({
     name: "rsc_review_ledger",
     label: "RSC Review Ledger",
     description:
       "RSC's append-only review ledger: cap rounds at 3, record unique findings and outcomes, record a tier-2 review panel, measure noise, list escapes. Writes .rsc/review-ledger.jsonl.",
-    parameters: z.object({
-      action: z.enum(["round", "panel", "record", "outcome", "stats", "escapes"]).describe("Ledger operation."),
-      task: z.string().optional().describe("Qualified task id <spec-slug>/<task> for round and panel."),
-      lenses: z.string().optional().describe("Comma-separated lenses for panel, e.g. correctness,security,tests."),
-      findingsJson: z.string().optional().describe("JSON array of findings, or an object with a findings array, for record."),
-      id: z.string().optional().describe("Finding id for outcome, e.g. L1."),
-      outcome: z.enum(["fixed", "false", "intentional", "irrelevant", "parked"]).optional().describe("Outcome value."),
-      since: z.string().optional().describe("Git ref for escapes."),
-      json: z.boolean().optional().describe("Return JSON where the original CLI offers it."),
-    }),
+    parameters: ledgerParams,
     approval: "write",
     async execute(_id, params, _signal, _onUpdate, ctx) {
       const root = sello.resolveRoot(projectRoot(ctx.cwd));
@@ -396,7 +470,8 @@ export default async function adaptiveEngineering(pi: ExtensionAPI) {
           } catch (error) {
             throw new Error(`rsc: findingsJson is not valid JSON (${(error as Error).message})`);
           }
-          const list = Array.isArray(parsed) ? parsed : Array.isArray(parsed?.findings) ? parsed.findings : [parsed];
+          const wrapped = parsed && typeof parsed === "object" ? (parsed as { findings?: unknown[] }) : null;
+          const list = Array.isArray(parsed) ? parsed : Array.isArray(wrapped?.findings) ? wrapped.findings : [parsed];
           const out = ledger.record(root, list, { task: params.task || "" });
           if (params.json) return result(JSON.stringify(out, null, 2), { findings: out });
           return result(
@@ -422,8 +497,18 @@ export default async function adaptiveEngineering(pi: ExtensionAPI) {
           if (!found.ok) throw new Error(found.message);
           return result(params.json ? JSON.stringify(found, null, 2) : ledger.renderEscapes(found), found);
         }
+        default:
+          throw new Error(`rsc_review_ledger: unknown action ${String(params.action)}`);
       }
     },
+  });
+
+  const consolidateParams = z.object({
+    paths: z.array(z.string()).describe("Lens report files (markdown with ```json findings blocks) or plain JSON."),
+    // Upstream CLI accepts only a non-negative integer; express it in the schema too, not only in
+    // the runtime guard below (which keeps direct execute() callers honest when OMP is bypassed).
+    window: z.number().int().min(0).optional().describe("Line window for same-place grouping (default 3)."),
+    json: z.boolean().optional().describe("Return structured output."),
   });
 
   pi.registerTool({
@@ -431,14 +516,14 @@ export default async function adaptiveEngineering(pi: ExtensionAPI) {
     label: "RSC Review Consolidate",
     description:
       "Merge the refuter panel's findings from report files: same place and claim collapse, the highest severity survives, and a blocker/should-fix without file:line or a failure scenario is downgraded to a question.",
-    parameters: z.object({
-      paths: z.array(z.string()).describe("Lens report files (markdown with ```json findings blocks) or plain JSON."),
-      window: z.number().optional().describe("Line window for same-place grouping (default 3)."),
-      json: z.boolean().optional().describe("Return structured output."),
-    }),
+    parameters: consolidateParams,
     approval: "read",
     async execute(_id, params, _signal, _onUpdate, ctx) {
       if (!params.paths?.length) throw new Error("rsc_review_consolidate needs at least one report path");
+      // Upstream CLI: window must be a non-negative integer; anything else is a usage error, not a silent 3.
+      if (params.window !== undefined && (!Number.isInteger(params.window) || params.window < 0)) {
+        throw new Error("rsc: window must be a non-negative integer");
+      }
       const sources: Array<[string, string]> = [];
       for (const file of params.paths) {
         sources.push([readFileSync(resolve(ctx.cwd, file), "utf8"), file]);
@@ -456,21 +541,23 @@ export default async function adaptiveEngineering(pi: ExtensionAPI) {
     },
   });
 
+  const selloParams = z.object({
+    action: z.enum(["on", "off", "freeze", "approve", "block", "budget", "budget-check", "check", "report", "status"]),
+    global: z.boolean().optional().describe("on/off: write the user-scope switch instead of the project switch."),
+    lenses: z.string().optional().describe("Comma-separated lenses for approve."),
+    acceptPartialLenses: z.boolean().optional().describe("approve: seal even with fewer lenses than the tier requires."),
+    note: z.string().optional().describe("approve/block: non-blocking finding to append."),
+    reason: z.string().optional().describe("block: why the change is blocked."),
+    lines: z.number().optional().describe("budget: declared line budget."),
+    justify: z.string().optional().describe("budget-check: justification for an overrun."),
+  });
+
   pi.registerTool({
       name: "rsc_sello",
       label: "RSC Sello",
       description:
         "RSC's sello (review receipt): turn the byte-binding gate on/off, freeze the candidate, approve/block with lenses, declare and check a fix budget, and inspect status. State lives in .rsc/.",
-      parameters: z.object({
-        action: z.enum(["on", "off", "freeze", "approve", "block", "budget", "budget-check", "check", "report", "status"]),
-        global: z.boolean().optional().describe("on/off: write the user-scope switch instead of the project switch."),
-        lenses: z.string().optional().describe("Comma-separated lenses for approve."),
-        acceptPartialLenses: z.boolean().optional().describe("approve: seal even with fewer lenses than the tier requires."),
-        note: z.string().optional().describe("approve/block: non-blocking finding to append."),
-        reason: z.string().optional().describe("block: why the change is blocked."),
-        lines: z.number().optional().describe("budget: declared line budget."),
-        justify: z.string().optional().describe("budget-check: justification for an overrun."),
-      }),
+      parameters: selloParams,
       approval: "write",
       async execute(_id, params, _signal, _onUpdate, ctx) {
         const outcome = selloTool.runSello(projectRoot(ctx.cwd), params.action, params);
@@ -501,7 +588,7 @@ export default async function adaptiveEngineering(pi: ExtensionAPI) {
       setMarker(root, ".no-trunk-guard", true);
       setMarker(root, ".no-trunk-open", false);
       switchResult(
-        "rsc main unlock: the agent may now work on the default branch in this project. Commit .rsc/ if the team should inherit the decision.",
+        "rsc main unlock: the agent may now work on the default branch in this checkout. A linked worktree inherits this when it has no .rsc/ yet; a clone does not, because .rsc/ is local machine state.",
       );
     },
   });
@@ -513,7 +600,7 @@ export default async function adaptiveEngineering(pi: ExtensionAPI) {
       setMarker(root, ".no-trunk-open", true);
       setMarker(root, ".no-trunk-guard", false);
       switchResult(
-        "rsc main lock: branches and pull requests for this project — the default branch is closed for the agent, and it asks before each code change where it goes.",
+        "rsc main lock: branches and pull requests in this checkout — the default branch is closed for the agent, and it asks before each code change where it goes.",
       );
     },
   });
@@ -524,7 +611,7 @@ export default async function adaptiveEngineering(pi: ExtensionAPI) {
       const root = projectRoot(ctx.cwd);
       setMarker(root, ".no-worktree-isolation", true);
       switchResult(
-        "rsc isolation off: sessions may share this folder without a worktree. Commit .rsc/ if the team should inherit the decision.",
+        "rsc isolation off: sessions may share this folder without a worktree. A linked worktree inherits this when it has no .rsc/ yet; a clone does not, because .rsc/ is local machine state.",
       );
     },
   });
@@ -544,7 +631,6 @@ export default async function adaptiveEngineering(pi: ExtensionAPI) {
     description: "Report this project's trunk policy, worktree isolation switches and sello state.",
     handler: async (_args, ctx) => {
       const root = projectRoot(ctx.cwd);
-      const trunk = trunk;
       const policy = trunk.trunkPolicy(root);
       const isolation = existsSync(join(root, ".rsc", ".no-worktree-isolation")) ? "off" : "on";
       switchResult(
@@ -555,6 +641,10 @@ export default async function adaptiveEngineering(pi: ExtensionAPI) {
             trunkPolicy: policy,
             worktreeIsolation: isolation,
             sello: sello.checkSello(root),
+            // `.rsc/` belongs to this checkout; only the project opt-outs are inherited, once, when
+            // a linked worktree has no state yet. The main checkout is informational, never a root
+            // for this session's git operations.
+            state: stateRoots.stateSummary(ctx.cwd),
           },
           null,
           2,

@@ -11,7 +11,7 @@ origin: risco
 
 Tests prove the code works, not that it does what was asked. Review answers that other question: **is the diff correct, well-scoped and faithful to the spec — or did it pass for the wrong reasons?** In ASDD (`skill://asdd`) it runs in two modes:
 
-- **Per task** — called from `implement`'s loop after each task's self-check. Depth comes from `rsc_risk [--base <ref>] [paths…]` (same path table as the sello, works with the sello off): **tier 0** → no review; **tier 1** → one fresh-context reviewer (a subagent that never saw the implementation conversation); **tier 2** → the three-refuter panel below, recorded after it runs with `rsc_review_ledger panel <slug>/<task> --lenses correctness,security,tests` (the ship guard refuses to push a tier-2 branch without it — one reviewer is not a panel), and the branch will wait for human approval at ship. The tier reads the diff's content too: auth code in a generic file is tier 2.
+- **Per task** — called from `implement`'s loop after each task's self-check. Depth comes from the `rsc_risk` tool (`base`, `paths`) (same path table as the sello, works with the sello off): **tier 0** → no review; **tier 1** → one fresh-context reviewer (a subagent that never saw the implementation conversation); **tier 2** → the three-refuter panel below, recorded after it runs with the `rsc_review_ledger` tool (`action: "panel"`, `task: "<slug>/<task>"`, `lenses: "correctness,security,tests"`) (the ship guard refuses to push a tier-2 branch without it — one reviewer is not a panel), and the branch will wait for human approval at ship. The tier reads the diff's content too: auth code in a generic file is tier 2.
 - **Closing review** — once, before `ship`: the whole branch against the spec. Forty individually-correct tasks can still fail to be the feature together: a criterion nobody owned, two tasks that each assumed the other handled an edge, scope that crept in a slice at a time. Read the spec's acceptance criteria and "must respect" list against `git diff <base>...HEAD`, not the task reviews. Its record — tier, counts, verdict, each finding with its outcome — goes to `02-DOCS/wiki/sdd/reviews/<slug>.md`.
 
 This skill owns **two roles that share one discipline**:
@@ -109,30 +109,30 @@ End every review you give with one of three, and nothing mushy in between:
 ### The sello — when this project opted in
 
 If the sello is on — `.rsc/sello-config.json` in the project, or `~/.rsc/sello-config.json` for
-every project (`sello on --global`; the project switch always wins) — the review's verdict is
+every project (the `rsc_sello` tool with `action: "on"` and `global: true`; the project switch always wins) — the review's verdict is
 **sealed to the exact bytes reviewed**, and the ship gate refuses commit/push/PR on anything else.
 
 **What the sello does and does not prove.** It binds bytes, not intent: it guarantees *what ships
-is what was reviewed*, never *the review was good*. You are the one calling `sello approve`, so it
+is what was reviewed*, never *the review was good*. You are the one calling the `rsc_sello` tool with `action: "approve"`, so it
 is self-attested — drift protection between review and delivery, not tamper-evidence. Sealing
 without actually running the lenses produces a valid sello and a worthless one.
 
-Every state transition is deterministic CLI, never tokens:
+Every state transition is a deterministic tool call, never tokens:
 
 ```text
-1. rsc_sello freeze      → hashes the candidate, prints risk tier + lens count
+1. rsc_sello tool, action: "freeze"  → hashes the candidate, prints risk tier + lens count
 2. Run the lenses (below), filter findings, decide
-3a. approved → rsc_sello approve --lenses correctness,security,tests
-3b. blocked  → rsc_sello block --reason "<the blocking finding>"
+3a. approved → rsc_sello tool, action: "approve", lenses: "correctness,security,tests"
+3b. blocked  → rsc_sello tool, action: "block", reason: "<the blocking finding>"
 ```
 
 `approve` refuses to seal with fewer lenses than the tier requires — pass them all, or accept the
-gap deliberately with `--accept-partial-lenses` (it is recorded). Every approval also appends to
+gap deliberately with `acceptPartialLenses: true` (it is recorded). Every approval also appends to
 `.rsc/sello-log.jsonl`, so what shipped under which verdict survives the next freeze.
 
 ### Depth by risk — who reviews
 
-`rsc_risk` and `sello freeze` read the same path table, so the tier is the same with the sello on
+The `rsc_risk` tool and the `rsc_sello` tool with `action: "freeze"` read the same path table, so the tier is the same with the sello on
 or off. Tier 0 never reaches you (docs/copy pass silently); tier 1 → **one fresh-context
 reviewer** running the most relevant pass from the table above; tier 2 → **three parallel
 fresh-context subagents** (`refuter-correctness` · `refuter-security` · `refuter-tests`), each
@@ -182,7 +182,7 @@ steps, in this order:
    {"severity":"blocker|should-fix|nit|question","file":"path","line":N,"claim":"…","failure_scenario":"concrete input → wrong result","evidence":"quoted code","class":"bug class"}
    ```
 
-   Save the reports and run `rsc_review_consolidate <reports…>`. It merges findings
+   Save the reports and run the `rsc_review_consolidate` tool with `paths: [<report files>]`. It merges findings
    on the same place that say the same thing, or that quote the same evidence; keeps the highest
    severity and every lens that saw it; and **downgrades a blocker or should-fix with no
    `file:line` or no `failure_scenario` to a question**. Several lenses on one finding is a reason
@@ -195,7 +195,7 @@ steps, in this order:
 
 Report the consolidated count honestly ("11 reported → 4 unique → 2 confirmed"), and list what was
 refuted and why: a refuted finding hidden from the author is a review nobody can audit. At tier 1
-(one reviewer) there is nothing to group, but run `review consolidate` on its one report anyway:
+(one reviewer) there is nothing to group, but run the `rsc_review_consolidate` tool on its one report anyway:
 it applies the downgrade, and every blocker and should-fix still goes to `finding-verifier`.
 
 **A finding blocks only if it survives all three filters** — no exceptions, and eagerness to
@@ -209,9 +209,9 @@ find something is not evidence:
    its reason in the report); UNPROVEN is a `[question]`, and questions don't block.
 
 **Fixing a blocker is budgeted.** Before touching anything: estimate the fix and declare it —
-`rsc_sello budget --lines <N>`. After the fix: `sello budget-check` (over budget →
-justify with `--justify "…"` or shrink; an unexplained overrun is how over-engineering enters
-disguised as a fix). Then `sello freeze` + re-review **only the divergence**, and approve. Each
+the `rsc_sello` tool with `action: "budget"` and `lines: <N>`. After the fix: `action:
+"budget-check"` (over budget → justify with `justify: "…"` or shrink; an unexplained overrun is how over-engineering enters
+disguised as a fix). Then `rsc_sello` `freeze` + re-review **only the divergence**, and approve. Each
 fix-and-re-review is one round of the loop below.
 
 ### Convergence — the fix loop ends
@@ -220,22 +220,23 @@ A review loop that never converges is worse than none: Anthropic saw a single PR
 Four rules, enforced by `rsc_review_ledger` (`.rsc/review-ledger.jsonl`) rather
 than by memory:
 
-1. **Max 3 rounds per task.** Call `review ledger round <slug>/<task>` before **every** review of
-   the task, the first included: round 1 is the task's first review, not its first fix. It exits
-   non-zero on the 4th. That is not "try harder": rethink the approach, or park the task in the
+1. **Max 3 rounds per task.** Call the `rsc_review_ledger` tool with `action: "round"` before **every** review of
+   the task, the first included: round 1 is the task's first review, not its first fix. It fails
+   on the 4th. That is not "try harder": rethink the approach, or park the task in the
    decision queue (a `blocking` entry) and continue with independent work.
 2. **From round 2, re-review only the new diff** — what changed since the last round, not the task
    again from scratch.
 3. **Flag the bug class, not the line.** "Every handler in this file trusts `req.params.id`" — so
    one fix covers every instance and round 3 does not find the sibling.
-4. **Never repeat a finding.** Record each round's findings with `review ledger record
-   <findings.json>` (the consolidate output works). A finding already seen — same file, class and
+4. **Never repeat a finding.** Record each round's findings with the `rsc_review_ledger` tool
+   (`action: "record"`, `findingsJson: <the inline JSON array>` — the consolidate output works;
+   the tool takes JSON inline, not a file path). A finding already seen — same file, class and
    normalized title — comes back marked `repeat`; it is never re-raised as new. A repeat means the
    last fix missed the class, so say that instead.
 
-**Every finding closes with an outcome**: `review ledger outcome <id> fixed|false|intentional|irrelevant|parked`
+**Every finding closes with an outcome**: the `rsc_review_ledger` tool with `action: "outcome"`, `id`, and `outcome: fixed|false|intentional|irrelevant|parked`
 — `parked` when the finding's task went to the decision queue (neither fixed nor dismissed; a human
-decides). `review ledger stats` then shows totals per outcome, the false rate and mean rounds per
+decides). The `rsc_review_ledger` `stats` action then shows totals per outcome, the false rate and mean rounds per
 task — the only way to tell whether a change to the reviewer made it better or worse.
 
 The ledger is **local**: it lives in `.rsc/` and is never committed, so it does not travel between
@@ -321,10 +322,10 @@ This phase's default model tier is **`heavy`** — adversarial diff reading is w
 ## Where this writes — and how the reviewer learns
 
 - **Accepted/declined findings** of consequence → append to `02-DOCS/wiki/sdd/decisions.md` (e.g. "declined NPE finding on documents.py:42 — guarded by require_auth; added regression test"). This is the same append-only log `implement` writes to.
-- **Escapes become cases.** `rsc_review_ledger (action: escapes) [--since <ref>]` lists every revert commit and whether it has a case at `02-DOCS/wiki/sdd/review-evals/<shortsha>.md`. Write the missing ones: the diff that shipped, where the bug was, and what the reviewer should have said. Only `Revert "…"` / `revert:` commits are seen; a hand-made revert is invisible.
+- **Escapes become cases.** The `rsc_review_ledger` tool with `action: "escapes"` and `since: "<ref>"` lists every revert commit and whether it has a case at `02-DOCS/wiki/sdd/review-evals/<shortsha>.md`. Write the missing ones: the diff that shipped, where the bug was, and what the reviewer should have said. Only `Revert "…"` / `revert:` commits are seen; a hand-made revert is invisible.
 - **A finding that keeps repeating becomes a rule** — a lint rule, a constitution principle (`02-DOCS/wiki/sdd/constitution.md`, amended via `constitution`) or a line in `REVIEW.md`. Ask what the model didn't have in front of it: a repeat is almost always missing context, not a careless reviewer.
 
-Index them in `02-DOCS/wiki/index.md` (the Knowledge map; root `CLAUDE.md` keeps only a short pointer) under the `sdd/` topic — the harness owns that map; this skill just keeps its rows honest.
+Index them in `02-DOCS/wiki/index.md` (the Knowledge map; the root `AGENTS.md` keeps only a short pointer) under the `sdd/` topic — the harness owns that map; this skill just keeps its rows honest.
 
 ## Result envelope
 

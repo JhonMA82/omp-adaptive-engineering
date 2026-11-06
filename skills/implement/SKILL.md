@@ -97,25 +97,23 @@ invent a looser one; done means that test is green and the traced acceptance cri
 
 ### b) Risk — computed, never chosen
 
-```bash
-rsc_risk --base <task base sha> --json
-```
-
-It reads the task's **actual** diff through the sello's path table (sello on or off) and prints the
+Call the `rsc_risk` tool with `base: <task base sha>` and `json: true` (`read xd://rsc_risk` shows
+the schema). It reads the task's **actual** diff through the sello's path table (sello on or off) and prints the
 tier, the touched classes, `reviewers: 0|1|3` and `human approval: required|not required`. Tier 2 =
 auth, billing, CI workflows, migrations, secrets, harness config. The computed tier wins over the
 task's risk forecast. **The agent never picks or argues down its own tier.**
 
 ### c) Review scaled by tier — fresh context
 
-Tier 1 or 2: first call `rsc_review_ledger round <slug>/<task>` — before **every**
-review of the task, this first one included. Round 1 is the task's first review, not its first fix.
+Tier 1 or 2: first call the `rsc_review_ledger` tool with `action: "round"` and
+`task: "<slug>/<task>"` — before **every** review of the task, this first one included. Round 1 is the task's first review, not its first fix.
 
 | Tier | Review |
 | --- | --- |
 | 0 | none — the controls (e) still run |
 | 1 | one fresh-context reviewer; frozen brief in `skill://implement/references/per-task-review.md` |
-| 2 | the three refuters (`refuter-correctness` · `refuter-security` · `refuter-tests`) in parallel, as `skill://review` runs them; then `review ledger panel <slug>/<task> --lenses correctness,security,tests` — the push gate checks it. Wait for every reviewer inside the turn; never end the turn to ask whether to continue |
+| 2 | the three refuters (`refuter-correctness` · `refuter-security` · `refuter-tests`) in parallel, as `skill://review` runs them; then the `rsc_review_ledger` tool with `action: "panel"`, `task: "<slug>/<task>"` and
+`lenses: "correctness,security,tests"` — the push gate checks it. Wait for every reviewer inside the turn; never end the turn to ask whether to continue |
 
 Every reviewer gets the **spec**, the **diff as a file** (`skill://implement/scripts/review-package <BASE> <HEAD>`, BASE
 = the task's *recorded* base sha, never `HEAD~1`), the **surrounding code** at that sha (not just the
@@ -126,13 +124,15 @@ finding.
 
 ### d) Consolidate, verify, record
 
-Exactly as `skill://review` → *Consolidate, then verify*: `rsc_review_consolidate
-<reports…>` (tier 1 too: it applies the downgrade), then `finding-verifier` on every finding it
-marks `verify` — every blocker and should-fix. Findings use the JSON shape in
-`skill://implement/references/per-task-review.md`. Then `rsc_review_ledger record <findings.json>`. A
-finding the ledger already holds comes back `repeat`: **never raise it again**. When a finding
-closes, record its outcome: `review ledger outcome <id> fixed|false|intentional|irrelevant|parked`
-(`parked` = its task went to the decision queue). The ledger is local (`.rsc/`, not committed);
+Exactly as `skill://review` → *Consolidate, then verify*: the `rsc_review_consolidate` tool with
+`paths: [<report files>]` (tier 1 too: it applies the downgrade), then `finding-verifier` on every
+finding it marks `verify` — every blocker and should-fix. Findings use the JSON shape in
+`skill://implement/references/per-task-review.md`. Then the `rsc_review_ledger` tool with
+`action: "record"` and `findingsJson: <the inline JSON array>`; it has no path argument, so paste
+the findings, do not name a file. A finding the ledger already holds comes back `repeat`: **never
+raise it again**. When a finding closes, record its outcome with `action: "outcome"`, `id: <id>`
+and `outcome: fixed|false|intentional|irrelevant|parked` (`parked` = its task went to the decision
+queue). The ledger is local (`.rsc/`, not committed);
 what lasts is the review-evals cases and rules `review` writes from it.
 
 ### e) Mandatory controls — every tier
@@ -150,7 +150,7 @@ A control that did not run is reported as **not run**, never as passed — and t
 
 ### f) Fix loop — at most 3 rounds
 
-Each re-review opens with another `review ledger round <slug>/<task>` (step c). It exits non-zero
+Each re-review opens with another `rsc_review_ledger` round (step c). The call fails
 on the 4th round with the action to take; obey it (step g).
 
 - **From round 2, re-review only the new diff** (BASE = the previous round's head).
@@ -257,11 +257,11 @@ test output. You merge the branches, then run the *combined* test suite before t
 green-in-isolation is not green-together. Hand the orchestration to `parallel`; keep the TDD
 discipline inside each branch.
 
-**Dispatch implementation work to the `developer` subagent.** rsc installs a `developer` agent
-pinned to the balanced tier (Sonnet by default, chosen at onboarding, never `light`). When you
-delegate a task or fan out via `parallel`, dispatch it to that agent (e.g. Claude Code
-`subagent_type: developer`) so the bulk of TDD execution runs on the cheaper-but-capable model
-while you stay on the session model to orchestrate. Full rationale: `skill://asdd/references/model-routing.md`.
+**Dispatch implementation work to the `developer` subagent.** The bundled `developer` agent has no
+upstream model pin, so OMP decides the model unless routing is enabled. When you delegate a task or
+fan out via `parallel`, dispatch it to `developer` so the bulk of TDD execution stays in a fresh
+context while you orchestrate. With `models.enabled: true`, pass the resolved model on the dispatch;
+otherwise it inherits the session model. Full rationale: `skill://asdd/references/model-routing.md`.
 
 ### The dispatch contract (carriers, statuses, escalation)
 
@@ -274,12 +274,12 @@ each dispatch self-sufficient and make its return machine-checkable:
   `scripts/task-brief <plan> <N>` (N as `1`, `001` or `T001`; reads the `tasks` table row, its `**T001 — Interfaces**` block and
   any `### T1` detail block) and `skill://implement/scripts/review-package` — pasted briefs and diffs stay resident in
   your context and get re-read every turn.
-- **Native isolation leaves worktrees behind.** A subagent dispatched with worktree isolation
-  works in `.claude/worktrees/`. `rsc_risk` ignores that folder, but after you cherry-pick the
-  worker's commits, remove it (`git worktree remove <path>`).
-- **Model is REQUIRED on every dispatch.** Always set the subagent's model explicitly (the
-  `developer` agent already pins balanced). An omitted model silently inherits the session's model —
-  usually the most expensive one — which is the quiet way fan-out cost explodes.
+- **Isolation leaves worktrees behind.** A subagent dispatched with OMP's task isolation works in a
+  worktree OMP manages outside the checkout. After you cherry-pick the worker's commits, list them
+  (`git worktree list`) and remove the one you used (`git worktree remove <path>`).
+- **Model choice follows OMP.** The port removes upstream model pins from the agents, so a
+  dispatch inherits the session model. Pass a model explicitly only when the person enabled model
+  routing in `02-DOCS/wiki/sdd/config.yaml`; never claim a switch a tool cannot make.
 - **The worker reports one of four statuses** (it does not guess when unsure):
   - `DONE` — done-check green, `Produces` contract met.
   - `DONE_WITH_CONCERNS` — green, but it flagged a risk/assumption for you to adjudicate.
@@ -307,7 +307,7 @@ anything irreversible. In autopilot, log it and continue. Brevity never changes 
 
 When you make a choice the plan did not fully specify — a library, a data shape, an error contract, a
 deviation from the plan — append it to `02-DOCS/wiki/sdd/decisions.md` (append-only; create it if
-absent and index it in `02-DOCS/wiki/index.md` (the Knowledge map; root `CLAUDE.md` keeps only a short pointer) under the `sdd/` topic). One entry:
+absent and index it in `02-DOCS/wiki/index.md` (the Knowledge map; the root `AGENTS.md` keeps only a short pointer) under the `sdd/` topic). One entry:
 
 ```text
 ## YYYY-MM-DD — <short title>  (feature: <slug>, task: <n>)
@@ -363,8 +363,8 @@ outranks the plan, and the plan outranks your in-the-moment preference.
 ```text
 - [ ] a) RED for the right reason → GREEN → REFACTOR; committed as one unit (authorship = Eric)
 - [ ] b) `rsc_risk` on the task diff; tier recorded
-- [ ] c) `review ledger round <slug>/<task>` before each review (≤ 3); by tier, fresh context, no pre-judging
-- [ ] d) `review consolidate` + `finding-verifier`; `review ledger record`; outcomes closed
+- [ ] c) `rsc_review_ledger` round before each review (≤ 3); by tier, fresh context, no pre-judging
+- [ ] d) `rsc_review_consolidate` + `finding-verifier`; `rsc_review_ledger` record; outcomes closed
 - [ ] e) tests, build, security, traceability — each passed or **not run**
 - [ ] f) re-review only the new diff; class fixed, no repeats
 - [ ] g) fixed + logged in decisions.md, or in the decision queue (`blocking` / `review-after`)

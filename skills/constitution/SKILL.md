@@ -86,7 +86,7 @@ Write `02-DOCS/wiki/sdd/constitution.md` from the template in `references/consti
 
 Create `02-DOCS/wiki/sdd/` if it does not exist. Do not overwrite an existing constitution — amend it.
 
-**A draft is "complete me", not "amend me".** `rsc onboard` writes a skeleton with `status: draft` in the frontmatter: the template's headings, the facts onboarding knew (goal, kind, scope, workflow, detected stack) and no principle. Keep those facts, run the interview, fill the sections, then on ratification drop `status: draft`, set `version: v1.0.0` and log v1.0.0 in the amendment log.
+**A draft is "complete me", not "amend me".** If a skeleton exists with `status: draft` in its frontmatter (upstream's onboarding wrote one; this port ships no onboarding), it carries the template's headings, the facts already known (goal, kind, scope, workflow, detected stack) and no principle. Keep those facts, run the interview, fill the sections, then on ratification drop `status: draft`, set `version: v1.0.0` and log v1.0.0 in the amendment log.
 
 ## REVIEW.md — what the reviewer reads first
 
@@ -143,7 +143,7 @@ This skill's `02-DOCS` record is the constitution at `02-DOCS/wiki/sdd/constitut
 | Project constitution (SDD non-negotiables) | `02-DOCS/wiki/sdd/constitution.md` |
 ```
 
-Never edit the root `CLAUDE.md` from here: it is owned by `harness` and is tier 2 in `rsc_risk`. Every later ASDD phase reads the constitution before it works. The harness maintains and improves the article over the life of the project; this skill is the place that ratifies and amends it.
+Never edit the root `AGENTS.md` from here: it is owned by `harness` and is tier 2 in `rsc_risk`. Every later ASDD phase reads the constitution before it works. The harness maintains and improves the article over the life of the project; this skill is the place that ratifies and amends it.
 
 ## Result envelope
 

@@ -9,7 +9,8 @@
 //       how to carry on: a branch, or — if the project is in fact simple — the person unlocking it.
 //   B · another session is working in this same checkout (session-memory-core.mjs). Switching
 //       branches here would change its files under it, so it is denied, and the message says how to
-//       carry on: a worktree under `.worktrees/`.
+//       carry on: a worktree under `.worktrees/`. The OMP adapter injects `peers` from OMP's own
+//       session leases (targets/omp-session-peers.mjs); the upstream journal stays as the fallback.
 //   C · a worktree goes in `.worktrees/` at the root the session works in, never inside a project
 //       folder (Eric, 2026-10-27). In a workspace holding its projects as folders, `git -C <p>
 //       worktree add .worktrees/<b>` resolved inside the project; it is denied with the root's path.
@@ -174,7 +175,7 @@ export function refMoveTarget(seg) {
  * `git switch -c feat/x && git commit` is a commit on feat/x (allowed) and `git switch main && git
  * merge feat/x` is a merge on main (judged as one). `cd` and `git -C` move the folder being judged.
  */
-export async function evaluate({ root, command, cwd, sessionId }) {
+export async function evaluate({ root, command, cwd, sessionId, peers }) {
   if (typeof command !== 'string' || !command) return null;
   if (!SH) return null;
   // Words inside quotes or heredocs are text, not commands: `grep -rn "git commit" docs/` is a search.
@@ -212,7 +213,7 @@ export async function evaluate({ root, command, cwd, sessionId }) {
       const target = moveTarget(seg, at);
       if (target) {
         if (!existsSync(join(root, '.rsc', '.no-worktree-isolation'))) {
-          const reason = await isolationDenial({ root, here, sessionId, self });
+          const reason = await isolationDenial({ root, here, sessionId, self, peers });
           if (reason) return reason;
         }
         if (target.name) branchAt.set(here, target.name);
@@ -252,7 +253,7 @@ export async function evaluate({ root, command, cwd, sessionId }) {
         const trunk = defaultBranchName(here);
         if (branch && trunk && branch === trunk) {
           const policy = trunkPolicy(here);
-          if (policy.closed) return await trunkDenial({ root, here, sessionId, self, trunk, policy });
+          if (policy.closed) return await trunkDenial({ root, here, sessionId, self, peers, trunk, policy });
         }
       } catch { /* policy module missing → nothing to enforce */ }
     }
@@ -260,17 +261,24 @@ export async function evaluate({ root, command, cwd, sessionId }) {
   return null;
 }
 
-async function othersHere({ root, here, sessionId, self }) {
+async function othersHere({ root, here, sessionId, self, peers }) {
+  // OMP integration: the adapter injects a provider backed by OMP's own session leases.
+  if (typeof peers === 'function') {
+    try {
+      const found = await peers({ root, worktreeCwd: here, sessionId });
+      return Array.isArray(found) ? found : [];
+    } catch { return []; } // a provider that fails is no evidence, not a denial
+  }
   try {
     const { otherActiveSessions } = await import(self('./session-memory-core.mjs'));
     return otherActiveSessions({ cwd: root, worktreeCwd: here, sessionId, target: 'claude' });
   } catch { return []; } // no memory module → no detection
 }
 
-async function trunkDenial({ root, here, sessionId, self, trunk, policy }) {
+async function trunkDenial({ root, here, sessionId, self, peers, trunk, policy }) {
   // Where a branch would go depends on rule B: alone → this same folder; with company → .worktrees/.
   // Whether to branch at all is the person's call: the agent asks, it never branches on its own.
-  const others = existsSync(join(root, '.rsc', '.no-worktree-isolation')) ? [] : await othersHere({ root, here, sessionId, self });
+  const others = existsSync(join(root, '.rsc', '.no-worktree-isolation')) ? [] : await othersHere({ root, here, sessionId, self, peers });
   const branch = others.length
     ? '`git worktree add .worktrees/<branch> -b feat/<what>` and commit inside `.worktrees/<branch>/` (another session is working in this folder)'
     : '`git switch -c feat/<what>` in this same folder, no worktree';
@@ -296,8 +304,8 @@ function refDenial({ trunk, policy, how = '`git update-ref` and a forced `git br
     AUTOPILOT_LANDING;
 }
 
-async function isolationDenial({ root, here, sessionId, self }) {
-  const others = await othersHere({ root, here, sessionId, self });
+async function isolationDenial({ root, here, sessionId, self, peers }) {
+  const others = await othersHere({ root, here, sessionId, self, peers });
   if (!others.length) return null;
   const who = others.map((o) => `${o.target}${o.branch ? ` on "${o.branch}"` : ''}, ${ago(o.updatedAt)}`).join('; ');
   return `Another session is working in this same folder (${who}). Switching branches here would change its files under it. ` +

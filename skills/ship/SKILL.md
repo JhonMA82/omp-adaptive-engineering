@@ -47,7 +47,7 @@ Run this before presenting the landing options. Any unchecked item is a stop —
 - [ ] **Working tree is clean** — `git status --short` is empty. No stray edits sneaking into the merge.
 - [ ] **On a feature branch, not the trunk** — `git rev-parse --abbrev-ref HEAD` is not `main`/`master`. If work landed directly on the trunk, that is its own problem; flag it, don't paper over it.
 - [ ] **Rebased / up to date with the base, and tested there** — branch is on top of latest `main`; conflicts resolved locally, not punted to the merge; the checks re-ran on the rebased branch.
-- [ ] **Risk tier known** — `rsc_risk --base main` run; its tier, classes and `human approval` line go into the PR's Risk section.
+- [ ] **Risk tier known** — the `rsc_risk` tool run with `base: "main"`; its tier, classes and `human approval` line go into the PR's Risk section.
 - [ ] **No `blocking` entry in the decision queue** (`## Decision queue` in `progress/<slug>.md`) — or the PR says which remain and it does not self-merge. `review-after` entries never block; they are listed in the PR body (or the parked summary) for the human.
 - [ ] **No secrets in the diff** — scan the staged/branch diff for keys, tokens, `.env` values (`git diff main... | grep -iE 'api[_-]?key|secret|password|token|BEGIN .*PRIVATE KEY'`). A hit is a blocker; remove it, and rotate it if it was ever pushed.
 - [ ] **Authorship is the responsible person** — `git config user.email` is the configured human; no AI trailer in any commit on the branch (run the grep above across `main..HEAD`).
@@ -61,8 +61,10 @@ echo "behind:   $(git rev-list --count HEAD..origin/main 2>/dev/null || echo '?'
 git log main..HEAD --format='%an <%ae>' | sort -u   # authors on this branch — expect only the configured user
 git diff main...HEAD | grep -icE 'api[_-]?key|secret|password|token|BEGIN .*PRIVATE KEY' \
   | sed 's/^/secret-hits: /'
-rsc_risk --base main                 # tier, classes, reviewers, human approval
 ```
+
+Then call the `rsc_risk` tool with `base: "main"`; its tier, classes, reviewers and human-approval
+line go into the PR's Risk section.
 
 ### The explainer — before the PR, for the human
 
@@ -84,11 +86,12 @@ commit → push step; opening the PR is still this skill's job (and its hard rul
 blocks you, do not work around it — run ship.
 
 The same guard also enforces the **sello** where it was opted into — per project
-(`.rsc/sello-config.json`) or for all of them (`~/.rsc/sello-config.json` via
-`sello on --global`, with the project switch always winning; `rsc_sello status` prints which
-scope decided): commit, push and PR are denied unless the change's exact bytes match the
-sealed, approved review — one byte of drift, a moved base, or a missing review on a risk>0 change
-all block, and every denial names its way out (re-run `review`, or `rsc_sello off`).
+(`.rsc/sello-config.json`) or for all of them (`~/.rsc/sello-config.json` via the
+`rsc_sello` tool with `action: "on"` and `global: true`, with the project switch always winning; the
+`rsc_sello` tool with `action: "status"` prints which scope decided): commit, push and PR are denied
+unless the change's exact bytes match the sealed, approved review — one byte of drift, a moved base,
+or a missing review on a risk>0 change all block, and every denial names its way out (re-run
+`review`, or use the `rsc_sello` tool with `action: "off"`).
 Risk-0 changes (docs/copy) always pass silently. Off by default; the flow lives in the `review`
 skill. Note `.rsc/.no-ship-guard` opts out of the branch-hygiene rules above but **not** of the
 sello, which has its own switch. The sello binds bytes, not intent — it proves what ships is what
@@ -213,8 +216,9 @@ the trunk; a parked branch is the opposite of that. Leave the worktree where it 
 that lands the branch will retire it after the manual checks. Discarding a worktree along with
 unmerged work stays what it always was: explicit, confirmed with the quoted branch name, and logged.
 
-If a native OMP worktree tool created the workspace, exit through that tool rather than the manual git
-cleanup — it owns its own lifecycle and its tracking has to stay consistent.
+If OMP created the workspace for a subagent (`task`), let OMP tear it down rather than removing it by
+hand — its lifecycle and tracking have to stay consistent. The manual checks above are for worktrees
+git alone knows about.
 
 ## Commit message discipline
 
@@ -241,7 +245,7 @@ In the `orient` voice: the explainer, the checklist result in one line, the thre
 | "I'll add `Co-Authored-By: Claude` / a 'Generated with Claude Code' footer to be transparent" | It forges the record. The work is the responsible person's — no AI trailer, ever. Strip it. |
 | "Review didn't formally approve but it's obviously fine" | No verdict = not ready. Ship runs on APPROVE only. Route back to review. |
 | "Tier 2, but the three refuters approved — I'll self-merge" | An agent's approval never counts as a human's. Tier 2 waits for human approval. |
-| "Tier 2, one reviewer was enough here" | The push gate wants the panel recorded (`review ledger panel … --lenses correctness,security,tests`). Run the three, record them, then push. |
+| "Tier 2, one reviewer was enough here" | The push gate wants the panel recorded (`rsc_review_ledger`, `action: "panel"`, `lenses: "correctness,security,tests"`). Run the three, record them, then push. |
 | "The tree has a couple of stray edits, they're harmless" | A dirty tree means the merge is not the reviewed diff. Clean it or stash it first. |
 | "`main` is protected but I'll just force-merge, I'm sure" | Protected means PR. Don't bypass the gate the repo deliberately set. |
 | "No remote and the guard denies the merge — I'll merge another way" | The denial is the answer. Park the branch with the merge command for the human. |
@@ -256,7 +260,7 @@ In the `orient` voice: the explainer, the checklist result in one line, the thre
 Ship is mostly git actions, but the outcome is recorded so the knowledge model stays whole:
 
 - **The landing decision** (which of the three options, and why) → append to `02-DOCS/wiki/sdd/decisions.md`, the same append-only log `implement`, `verify`, and `review` write to. Parks and discards are logged with their reason so dead-ends aren't re-walked.
-- A **shipped feature** flips its spec under `02-DOCS/wiki/sdd/specs/<slug>.md` to a shipped state (note the merge commit / PR). The harness owns the wiki; ship just keeps the `sdd/` rows in `02-DOCS/wiki/index.md` (the Knowledge map) honest — never the root `CLAUDE.md`.
+- A **shipped feature** flips its spec under `02-DOCS/wiki/sdd/specs/<slug>.md` to a shipped state (note the merge commit / PR). The harness owns the wiki; ship just keeps the `sdd/` rows in `02-DOCS/wiki/index.md` (the Knowledge map) honest — never the root `AGENTS.md`.
 - An **archive bundle** closes the loop under `02-DOCS/wiki/sdd/archive/<slug>/`:
   - `final-report.md` — what shipped, why, landing decision, links.
   - `apply-progress.md` — copy or link to `progress/<slug>.md`.
@@ -289,7 +293,7 @@ End with:
 
 ## Next in the chain
 
-Ship is the end of the ASDD loop for a feature. Two onward paths: the merged code still has to reach a **server / release** → hand off to **deployment** (`skill://deployment`); or the next feature restarts the loop at **specify** (`skill://specify`), or at **constitution** if the project's principles changed. The `asdd` dispatcher (`skill://asdd`) routes whichever comes next. Later, a revert of what shipped is an escape: `review` turns it into a case (`rsc_review_ledger (action: escapes)`).
+Ship is the end of the ASDD loop for a feature. Two onward paths: the merged code still has to reach a **server / release** → hand off to **deployment** (`skill://deployment`); or the next feature restarts the loop at **specify** (`skill://specify`), or at **constitution** if the project's principles changed. The `asdd` dispatcher (`skill://asdd`) routes whichever comes next. Later, a revert of what shipped is an escape: `review` turns it into a case (the `rsc_review_ledger` tool, `action: "escapes"`).
 
 ## Orientación (siempre)
 

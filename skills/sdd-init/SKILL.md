@@ -36,7 +36,7 @@ Ask only when the answer changes behavior; explain each trade-off in one line, i
 
 | Setting | Default | Options |
 | --- | --- | --- |
-| `execution_mode` | `interactive` | `interactive` pauses at review-risk gates; `automatic` chains phases until a blocker/risk appears. `sdd.execution_mode: automatic` is the switch `asdd`'s autopilot reads. |
+| `execution_mode` | `interactive` | `interactive` pauses at review-risk gates; `automatic` chains phases until a blocker/risk appears. `sdd.execution_mode: automatic` is the only autopilot switch; do not write a separate `autopilot` key. |
 | `artifact_store` | `02-DOCS/wiki/sdd` | Keep RSC artifacts in `02-DOCS`; do not create an `openspec/` parallel tree. |
 | `review_budget.line_budget` | `400` | Lower for solo tight review; higher only with explicit approval. |
 | `delivery_strategy.default` | `ask-on-risk` | `ask-on-risk`, `single-pr`, `autochain`, `exception`. |

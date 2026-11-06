@@ -8,6 +8,12 @@ This protocol is **embedded inside `harness`** — no external
 skill required. When the parent skill (`SKILL.md`) reaches Phase 4 step 8
 ("Build `02-DOCS/`"), follow this document.
 
+> **OMP port.** This document describes the method, not background machinery. The plugin installs
+> no session hooks, cron jobs or `schedule` tool. The SessionStart nudge, the
+> `PreCompact`/`SessionEnd` worklog capture and the suggested cron below are run by the agent on
+> request, or by an external scheduler the project already has; a sentence saying a pass runs
+> "automatically" means within the turn the agent is already doing, not while nobody is looking.
+
 ## Contents
 
 - [The paradigm — chaos in, knowledge out](#the-paradigm--chaos-in-knowledge-out)
@@ -118,7 +124,7 @@ plane keeps about the user and its own decisions. It is a normal wiki topic
   "siempre 3 opciones" pattern), the choice, and the why. Never edit past
   entries — same append-only discipline as `log.md` and `gaps.md`.
 
-Both articles are referenced from the root `CLAUDE.md` `## Knowledge map` under
+Both articles are referenced from the root instruction file's `## Knowledge map` under
 the `harness/` topic.
 
 ### Format split: markdown for state, HTML for surfaces
@@ -308,7 +314,7 @@ Omit `- Updated:` lines when no cascade updates occur.
 ### Auto-trigger: Maintenance Pass
 
 Every Ingest ends by running the **Maintenance Pass** (see Continuous
-Improvement section below). This is not optional — it runs automatically.
+Improvement section below). This is not optional — run it at the end of every Ingest.
 
 ---
 
@@ -324,7 +330,7 @@ sweep (on demand or scheduled) gives it order.
 
 - User says: `"procesa el inbox"`, `"sal a pasear"`, `"ingest inbox"`,
   `"sweep the inbox"`, `"process my drop folder"`.
-- Scheduled via cron (see below).
+- Scheduled by an external cron the project has configured (this port installs none; see below).
 
 ### Steps
 
@@ -400,8 +406,9 @@ generalizes the SDD session-summary convention to *any* work.
 
 - **Hook — `PreCompact` / `SessionEnd`** (Claude Code): fires right before context
   is lost or the session ends. The hook only *reminds*; the agent writes the
-  worklog (Karpathy: the LLM writes). Wired by `targets/` → `.rsc/worklog-checkpoint.mjs`
-  (run via `node`, so it works on Windows too).
+  worklog (Karpathy: the LLM writes). **Not ported:** this plugin ships no worklog
+  checkpoint hook, so on OMP treat the explicit milestone below as the trigger and capture the
+  worklog by hand before a long compaction.
 - **Explicit milestone**: after a commit or a shipped feature, capture a worklog.
 - **Daily curation automation**: distills any pending worklog raw on a timer (see
   Continuous Improvement and `daily-curation-automation.md`).
@@ -448,8 +455,8 @@ Prepend to `02-DOCS/wiki/log.md` (newest entry first, at the top):
 The Inbox Sweep processes what the user *dropped* in `inbox/`. The **Auto-Ingest
 Sweep** extends it: it also **discovers** un-ingested documents anywhere in the
 workspace and ingests them on its own — so the user never has to remember to file
-sources. It runs automatically (SessionStart nudge + daily cron; see Triggers) and
-on request.
+sources. Run it on request; this port installs no SessionStart nudge or cron. If the project
+already has an external one, the method is the same.
 
 The hard rule that keeps "automatic, workspace-wide" safe: **ingesting never
 destroys data** — the original is always preserved inside the brain at
@@ -737,7 +744,7 @@ human work.
 
 ### Layer 3 — Deep Improve (explicit or scheduled)
 
-**Runs on explicit user request, or via cron.** Heavier than Micro-Improve;
+**Runs on explicit user request, or via an external cron the project configured.** Heavier than Micro-Improve;
 processes multiple articles per run.
 
 Triggers:

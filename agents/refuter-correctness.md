@@ -32,7 +32,7 @@ If an answer is no, lower the severity or omit the finding. Every **blocker or s
 [{ "lens": "<your lens>", "severity": "blocker|should-fix|nit|question", "file": "path/from/repo/root", "line": 42, "claim": "one sentence: what is wrong", "failure_scenario": "concrete input + state -> wrong result", "evidence": "the exact changed line, quoted" }]
 ```
 
-`rsc review consolidate` merges what several lenses reported about the same place and sends each unique blocker or should-fix to `finding-verifier`, whose job is to prove it false. A blocker or should-fix with no `file`, `line` or `failure_scenario` is downgraded to a question there, mechanically.
+The `rsc_review_consolidate` tool merges what several lenses reported about the same place and sends each unique blocker or should-fix to `finding-verifier`, whose job is to prove it false. A blocker or should-fix with no `file`, `line` or `failure_scenario` is downgraded to a question there, mechanically.
 
 **Common false positives to reject:** an equivalent mutant with no diverging input; a documented dummy value that never reaches a sink; a deliberate boundary already enforced by a caller; generated/vendor code outside the change; style preference presented as correctness; and a theoretical race with no shared state or overlapping lifetime.
 

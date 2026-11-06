@@ -125,7 +125,7 @@ first — isolate which side actually fails before you open either stack's debug
 When the cause is non-obvious — a race, an order dependency, an environment-only failure, a
 regression a reviewer would otherwise have to rediscover — append a short entry to
 `02-DOCS/wiki/sdd/decisions.md` (append-only; create it if absent and index it in
-`02-DOCS/wiki/index.md` under the `sdd/` topic — never the root `CLAUDE.md`). One entry:
+`02-DOCS/wiki/index.md` under the `sdd/` topic — never the root `AGENTS.md`). One entry:
 
 ```text
 ## YYYY-MM-DD — bug: <symptom in five words>  (feature: <slug>)

@@ -321,7 +321,7 @@ equivalent is in `references/secrets-and-supply-chain.md`.
 
 In a project with a `02-DOCS/` layer ([`harness`](`harness` skill)), this
 project's security decisions live in `02-DOCS/wiki/stack/security.md`, indexed
-from `02-DOCS/wiki/index.md` (the Knowledge map; root `CLAUDE.md` keeps only a
+from `02-DOCS/wiki/index.md` (the Knowledge map; the root `AGENTS.md` keeps only a
 pointer to it). Read it first and stay consistent; if it is missing or stale,
 create/update it with the real choices — threat model, auth model, secrets
 backend, CI security gates, accepted risks — index it, and bump its `Updated`

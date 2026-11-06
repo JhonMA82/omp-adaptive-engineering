@@ -43,7 +43,7 @@ This skill does **not** do a phase. It names the method, reads the register, pla
 
 **Where the human enters — three places only:** approving the spec, answering the decision queue, approving a tier-2 merge. Everything else runs.
 
-No ASDD phase edits the root `CLAUDE.md`: every artifact is indexed in `02-DOCS/wiki/index.md` (the Knowledge map). The root `CLAUDE.md` is owned by `harness` and is tier 2 in `rsc_risk`.
+No ASDD phase edits the root `AGENTS.md` (the instruction file OMP reads): every artifact is indexed in `02-DOCS/wiki/index.md` (the Knowledge map). The root `AGENTS.md` is owned by `harness` and is tier 2 in `rsc_risk`.
 
 ### The spec proves itself
 
@@ -51,11 +51,11 @@ Every spec answers four questions, and `spec:gate` refuses one dated 2026-11-03 
 
 ### The risk decides, never the agent
 
-`rsc_risk [--base <ref>] [paths…]` classifies a change by **what it touches and what it adds** (the sello's path table plus fixed content patterns — password hashing, session cookies, payments, schema changes, secrets — so auth code in `src/app.js` is still auth; works with the sello off): tier 0 docs/copy → no reviewer; tier 1 ordinary code → one fresh-context reviewer; tier 2 auth, billing, CI workflows, migrations, secrets, harness config → the three-refuter panel **and human approval**. An agent's approval never counts as a human's. **Enforced at push:** a tier-2 branch leaves the machine only with a spec linked to it that passes `rsc_spec_gate` **and** a panel recorded with `rsc_review_ledger panel <slug>/<task> --lenses correctness,security,tests`.
+The `rsc_risk` tool (discoverable: `read xd://rsc_risk` shows the schema, `write xd://rsc_risk` runs it; never a shell command) classifies a change by **what it touches and what it adds** (the sello's path table plus fixed content patterns — password hashing, session cookies, payments, schema changes, secrets — so auth code in `src/app.js` is still auth; works with the sello off): tier 0 docs/copy → no reviewer; tier 1 ordinary code → one fresh-context reviewer; tier 2 auth, billing, CI workflows, migrations, secrets, harness config → the three-refuter panel **and human approval**. An agent's approval never counts as a human's. **Enforced at push:** a tier-2 branch leaves the machine only with a spec linked to it that passes the `rsc_spec_gate` tool **and** a panel recorded with the `rsc_review_ledger` tool (`action: "panel"`, `task: "<slug>/<task>"`, `lenses: "correctness,security,tests"`).
 
 ### The loop converges
 
-`rsc_review_ledger` holds it to the rules that stopped Anthropic's 50-round reviews: `round <slug>/<task>` refuses a 4th round (rethink the approach or park the task), `record` marks a finding already raised as a `repeat` that is never raised again, `outcome` closes each finding as `fixed|false|intentional|irrelevant`, `stats` measures the noise. Flag the bug class, not the line; from round 2 re-review only the new diff.
+The `rsc_review_ledger` tool holds it to the rules that stopped Anthropic's 50-round reviews: `action: "round"` refuses a 4th round (rethink the approach or park the task), `action: "record"` marks a finding already raised as a `repeat` that is never raised again, `action: "outcome"` closes each finding as `fixed|false|intentional|irrelevant`, `action: "stats"` measures the noise. Flag the bug class, not the line; from round 2 re-review only the new diff.
 
 ### Park, don't block
 
@@ -129,7 +129,7 @@ Each phase declares a tier — `heavy` (constitution, plan, analyze, review, deb
 ├── progress/<slug>.md       ← append-only loop ledger + ## Decision queue
 ├── verifications/<slug>-YYYY-MM-DD.md
 ├── reviews/<slug>.md        ← closing review record
-├── review-evals/<sha>.md    ← one case per revert that escaped review (`rsc_review_ledger (action: escapes)`)
+├── review-evals/<sha>.md    ← one case per revert that escaped review (the `rsc_review_ledger` tool, `action: "escapes"`)
 ├── archive/<slug>/
 ├── sessions/<date>-<slug>.md
 └── decisions.md             ← append-only: every decision, and the task it was taken in
@@ -137,7 +137,7 @@ REVIEW.md                    ← project root: how this repo is judged
 .rsc/review-ledger.jsonl     ← findings, outcomes, rounds (tool-written)
 ```
 
-The directory keeps its `sdd/` name: existing projects keep working. Index it in `02-DOCS/wiki/index.md` under the `sdd/` topic — never in the root `CLAUDE.md`; the harness keeps it honest.
+The directory keeps its `sdd/` name: existing projects keep working. Index it in `02-DOCS/wiki/index.md` under the `sdd/` topic — never in the root `AGENTS.md`; the harness keeps it honest.
 
 ## Stack handoff and skill registry
 

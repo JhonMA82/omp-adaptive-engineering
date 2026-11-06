@@ -23,7 +23,7 @@ The report is the same for every reader: a finding table (severity, the two arti
 
 ## Inputs — locate the four artifacts
 
-Read all four before analyzing. The rsc-sdd artifacts live under `02-DOCS/wiki/sdd/`, indexed from `02-DOCS/wiki/index.md` (the Knowledge map; root `CLAUDE.md` keeps only a short pointer to it):
+Read all four before analyzing. The rsc-sdd artifacts live under `02-DOCS/wiki/sdd/`, indexed from `02-DOCS/wiki/index.md` (the Knowledge map; the root `AGENTS.md` keeps only a short pointer to it):
 
 | Artifact | Canonical location | Role in the check |
 | --- | --- | --- |

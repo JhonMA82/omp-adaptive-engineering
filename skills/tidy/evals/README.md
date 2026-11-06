@@ -1,5 +1,11 @@
 # Evals — tidy
 
+> **OMP port.** These scenarios are upstream; the cleanup step is adapted to the manual git
+> inventory the port ships (`git worktree list --porcelain`, clean/merged checks,
+> `git worktree remove`). `rsc upgrade` below names the upstream trigger for the boundary test, not
+> a command to run here: version upgrades belong to OMP’s plugin manager.
+
+
 The claim under test is the boundary with three neighbours that also say "update" or "clean":
 `rsc upgrade` (the harness version), `worktrees` (opening isolation) and `ship` (landing one
 branch). The negatives prove the split.

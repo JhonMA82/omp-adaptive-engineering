@@ -11,7 +11,7 @@ origin: risco
 
 This is the drafting half of ASDD stage 2, **Spec** (`skill://asdd`): **`specify`** writes the draft → `clarify` hunts its gaps → the human approves. Its single job is to turn a fuzzy intent into a written specification that states **WHAT** the change is and **WHY** it matters — and nothing about **HOW** it gets built.
 
-A spec is a contract about behaviour and outcomes, readable by a non-technical stakeholder and precise enough that a `plan` can be derived from it. The output is one file: `02-DOCS/wiki/sdd/specs/<slug>.md`, indexed in `02-DOCS/wiki/index.md` (the Knowledge map; root `CLAUDE.md` keeps only a short pointer).
+A spec is a contract about behaviour and outcomes, readable by a non-technical stakeholder and precise enough that a `plan` can be derived from it. The output is one file: `02-DOCS/wiki/sdd/specs/<slug>.md`, indexed in `02-DOCS/wiki/index.md` (the Knowledge map; the root `AGENTS.md` keeps only a short pointer).
 
 ## Detect the moment — and hold the gate
 
@@ -40,7 +40,7 @@ If, having looked, there is no real objection, **say so in one line and move on 
 **Offer autopilot once, right here.** At this boundary, propose how to run the rest of the chain:
 > *"¿Quieres que lo lleve hasta el final yo solo — spec → plan → código → verify, parando solo si algo es ambiguo — o prefieres que pare a que apruebes en cada fase?"*
 
-A **yes engages autopilot** (`skill://asdd`): you still write the spec and every artifact, but you auto-advance through the phases without re-asking — that up-front yes is the approval that satisfies the hard gate above, for the whole run. A **no** (or silence) keeps the default gated flow: write the spec, hand to `clarify`/`plan`, stop for approval before code. Either way the spec gets written; autopilot only changes whether you pause *between* phases — and it still stops for genuine ambiguity, hard failures, or destructive/outward actions (ship still confirms). If `sdd.autopilot: true` in config, autopilot is the default — still surface it once.
+A **yes engages autopilot** (`skill://asdd`): you still write the spec and every artifact, but you auto-advance through the phases without re-asking — that up-front yes is the approval that satisfies the hard gate above, for the whole run. A **no** (or silence) keeps the default gated flow: write the spec, hand to `clarify`/`plan`, stop for approval before code. Either way the spec gets written; autopilot only changes whether you pause *between* phases — and it still stops for genuine ambiguity, hard failures, or destructive/outward actions (ship still confirms). If `sdd.execution_mode: automatic` in config, autopilot is the default — still surface it once.
 
 ## The one rule that defines this skill
 
@@ -173,7 +173,7 @@ Run these in order. It is a collaborative dialogue, not a form you fill in silen
 6. PRESENT the design     → section by section (problem, users, behaviour, acceptance), scaled to complexity;
                             after EACH section ask "does this look right?" and adjust before moving on
 7. WRITE the spec         → 02-DOCS/wiki/sdd/specs/<slug>.md (WHAT/WHY), index it in 02-DOCS/wiki/index.md
-                            (the Knowledge map; root CLAUDE.md keeps only a short pointer), commit if a repo
+                            (the Knowledge map; the root AGENTS.md keeps only a short pointer), commit if a repo
 8. SELF-REVIEW            → run the EXIT GATE (below) until green; scan for contradictions, ambiguity,
                             scope creep; fix inline. On a non-trivial or high-risk spec, add a FRESH-EYES review
 9. USER APPROVES          → ask them to read the written spec and confirm; loop on changes until they approve
@@ -193,9 +193,9 @@ property of the **file**, not of your confidence:
 > Every template section carries content or an explicit typed open point, and no section holds an
 > unmarked assumption.
 
-Run `rsc_spec_gate <path>` on the spec you just wrote (no path: every spec in the
-project's `02-DOCS/wiki/sdd/specs/`). It prints `PASS`/`FAIL` per file, reports the missing and the
-empty sections by name, exits non-zero on any `FAIL`, and prints what it does **not** check — the
+Run the `rsc_spec_gate` tool with `paths: ["<path>"]` on the spec you just wrote (no `paths`: every
+spec in the project's `02-DOCS/wiki/sdd/specs/`). It prints `PASS`/`FAIL` per file, names the
+missing and empty sections, reports any `FAIL`, and prints what it does **not** check — the
 unmarked assumption is yours to catch, because no parser can. A red gate means the spec is not
 closed: name the section that failed and fix it before step 9.
 
@@ -344,10 +344,10 @@ repeated here as prohibitions: naming a behaviour makes it more available, not l
 ## Project grounding (02-DOCS + CLAUDE.md)
 
 - Read `02-DOCS/wiki/sdd/config.yaml` if present. If it is missing and the change is non-trivial, recommend `sdd-init` before proceeding; if the user asks to continue, record the missing config as a risk.
-- Read `02-DOCS/wiki/sdd/constitution.md` first — its principles are inherited constraints, not things to re-decide. If it's missing, note that the project has no constitution yet and suggest the `constitution` phase before continuing (you can still draft a spec, but flag the absence). If its frontmatter says `status: draft` (written by `rsc onboard`, unratified), route to `constitution` first and come back: a draft has no principles to inherit.
+- Read `02-DOCS/wiki/sdd/constitution.md` first — its principles are inherited constraints, not things to re-decide. If it's missing, note that the project has no constitution yet and suggest the `constitution` phase before continuing (you can still draft a spec, but flag the absence). If its frontmatter says `status: draft` (an unratified skeleton), route to `constitution` first and come back: a draft has no principles to inherit.
 - **No constitution yet?** Still write the spec, but inherit nothing — lean harder on the wiki and the user's answers, and record every constraint you would have inherited as a *point to clarify* instead of assuming it.
 - Write the spec to `02-DOCS/wiki/sdd/specs/<slug>.md`. Create the directory if absent.
-- Add a row in `02-DOCS/wiki/index.md` (the Knowledge map; root `CLAUDE.md` keeps only a short pointer) linking the new spec under the `sdd/specs` topic (additive only — never delete existing rows). Create the index if absent.
+- Add a row in `02-DOCS/wiki/index.md` (the Knowledge map; the root `AGENTS.md` keeps only a short pointer) linking the new spec under the `sdd/specs` topic (additive only — never delete existing rows). Create the index if absent.
 - Log the spec's creation and any significant scoping decision to `02-DOCS/wiki/sdd/decisions.md` (append-only), so the chain keeps a trace of why scope landed where it did. This is the canonical SDD decisions log shared with `constitution` and `plan` — not the harness's own `02-DOCS/wiki/harness/decisions.md`.
 
 ## Result envelope

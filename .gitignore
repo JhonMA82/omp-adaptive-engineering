@@ -3,3 +3,6 @@
 
 # Local review ledger and session memory
 .rsc/
+
+# Typecheck dependencies
+node_modules/

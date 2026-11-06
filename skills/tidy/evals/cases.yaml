@@ -46,7 +46,7 @@ capability:
       - "Fetches with prune and reads branches, worktrees, stashes and status for every repo before the first write"
       - "Deletes the merged branch with `git branch -d`, and the squash-merged one only after the content check (merge-tree tree equals the default's tree), reporting its tip SHA"
       - "Pushes the branch with the unpushed commit and keeps it, instead of deleting it"
-      - "Retires the landed worktree through `npx @ericrisco/rsc worktrees reap` and keeps the `.env` worktree, reporting the reaper's reason"
+      - "Retires the landed worktree through the manual git checks (`git worktree list --porcelain`, clean status, merged branch, `git worktree remove`) and keeps the `.env` worktree, reporting the reason"
       - "Stops on the uncommitted README.md edit and asks (commit, stash or leave) instead of stashing or discarding it on its own"
       - "Switches the clean child checkout back to main and pulls with `--ff-only`"
       - "Asks once, with the full list, before deleting any remote branch"
