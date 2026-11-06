@@ -1,12 +1,51 @@
 {
   "name": "adaptive-engineering",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "Adaptive engineering policy and N3 procedure for Oh My Pi, packaged as an optional OMP plugin.",
+  "description": "RSC Harness ported to Oh My Pi: deterministic guards, risk/spec/review gates and the original engineering skills, adapted at the ExtensionAPI boundary.",
   "license": "MIT",
   "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
   "omp": {
-    "version": "0.1.0",
-    "description": "Adaptive Engineering: choose N0-N3 rigor, use native OMP capabilities, preserve human decisions."
+    "version": "0.2.0",
+    "description": "RSC Harness for OMP: danger/branch/ship/gitmoji guards, risk, spec gate, review ledger, sello, and the suggest/ftd/asdd skills.",
+    "extensions": [
+      "./src/index.ts"
+    ],
+    "settings": {
+      "guards.danger": {
+        "type": "boolean",
+        "default": true,
+        "description": "Guard de comandos irreversibles: pregunta o deniega según el perfil y el modo."
+      },
+      "guards.branch": {
+        "type": "boolean",
+        "default": true,
+        "description": "Guard de rama: troncal cerrada y aislamiento en worktrees."
+      },
+      "guards.ship": {
+        "type": "boolean",
+        "default": true,
+        "description": "Guard de entrega: sello, spec enlazada y limpieza de rama."
+      },
+      "guards.gitmoji": {
+        "type": "boolean",
+        "default": true,
+        "description": "Exige gitmoji al inicio del mensaje de commit."
+      },
+      "danger.mode": {
+        "type": "enum",
+        "values": ["auto", "ask", "deny"],
+        "default": "auto",
+        "description": "Cómo decide el guard peligroso: auto hereda el perfil; ask pregunta; deny deniega. Nunca relaja un perfil no técnico."
+      }
+    }
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "test:adapter": "bun tests/adapter.test.ts",
+    "test:all": "node --test tests/*.test.js && bun tests/adapter.test.ts"
   }
 }
