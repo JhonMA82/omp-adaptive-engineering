@@ -31,3 +31,45 @@ dejar rastro en el repositorio. Se registra como punto abierto en la spec, con l
 anunciar en el arranque qué guards están apagados.
 
 **Spec.** `02-DOCS/wiki/sdd/specs/plugin-settings-tui.md`.
+
+## 2026-11-06 — Aprobación de la spec
+
+**Aprobada explícitamente** por el usuario, tras leerla y tras la revisión en frío. No fue un
+«sigue tú»: la pregunta era aprobar o pedir cambios, y respondió «Apruebo la spec».
+
+Estado: diseño aprobado. Los siete puntos abiertos siguen sin resolver y son el trabajo de
+`clarify`. La implementación no empieza hasta que exista plan y lista de tareas.
+
+Nota de entorno: el guard de rama cierra `master` por la señal de equipo (dos correos distintos
+en los últimos 50 commits), así que cualquier commit futuro en la rama por defecto pide decisión
+explícita. Este registro queda en el árbol de trabajo, sin commit.
+
+## 2026-11-06 — Clarify
+
+Tres preguntas cerradas con el usuario, dos de ellas cambiando el contrato:
+
+1. **Aviso al arrancar.** Sí: una línea, solo si algún guard está apagado. Motivo: la TUI quita
+   la trazabilidad que daba el fichero del repositorio. Entra como criterio de aceptación.
+2. **`ask` contra perfil no técnico.** Gana el perfil. El ajuste global endurece la protección,
+   nunca la afloja; si no, el ajuste de la máquina rompería la política del proyecto.
+3. **Constitución.** No se escribe ahora. Los principios aplicables se citan en la spec.
+
+Validado sin cambios: `auto` sobre el perfil, ajustes por máquina, un solo interruptor de rama.
+Diferido: interruptores por proyecto en la UI. Sin graduar: la vista del colaborador no técnico.
+
+Spec en `status: clarified`, 14 criterios de aceptación, gate PASS.
+
+## 2026-11-06 — Plan técnico
+
+**Snapshot por sesión** en vez de lectura por llamada. Motivo: el contrato dice que un cambio
+aplica en la sesión siguiente; leer por llamada lo aplicaría al instante. Además saca el disco del
+camino caliente de `tool_call`.
+
+**Ruta del lock**: dos candidatas derivadas de `getAgentDir()` de OMP, la primera existente gana.
+Si ninguna existe, defaults. Probado que `omp plugin config list adaptive-engineering --json`
+devuelve hoy `{settings:{}, schema:{}}`, así que la superficie del manifiesto es alcanzable.
+
+**Adaptación upstream**: `danger-guard.mjs` exporta `technicalLevel` para distinguir «sin perfil» de
+«perfil no técnico». Se anota en `NOTICE.md`.
+
+**Sin dependencias nuevas**, sin almacén de estado propio.

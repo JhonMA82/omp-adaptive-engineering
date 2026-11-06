@@ -6,13 +6,14 @@ tags: [sdd, spec]
 timestamp: 2026-11-06T01:27:53Z
 topic: sdd
 slug: plugin-settings-tui
-status: draft
+status: planned
 ---
 
 # Spec — Ajustes del plugin en la TUI de OMP
 
-> Slug: `plugin-settings-tui` · Status: draft · Created: 2026-11-06
-> Inherits: no constitution exists in this repo yet (see Points to clarify).
+> Slug: `plugin-settings-tui` · Status: planned · Created: 2026-11-06
+> Inherits: no constitution in this repo. The principles this cycle honours are cited inline from
+> README and NOTICE (decided 2026-11-06; see Clarifications).
 
 ## Problem & why
 
@@ -84,6 +85,9 @@ Referencia para verificar: esa tabla, aprobada en esta spec, más una captura de
 real en el momento de verificar. El criterio 1 se comprueba sobre la lista de ajustes que
 el plugin expone, no sobre una interpretación de la captura.
 
+`danger.mode` puede endurecer la protección, nunca aflojarla: con un perfil no técnico, `ask`
+no sustituye la negativa del perfil.
+
 ## What it must respect
 
 - Con un guard encendido y su ajuste por defecto, su decisión es idéntica a la de hoy,
@@ -95,6 +99,9 @@ el plugin expone, no sobre una interpretación de la captura.
   repositorio que lo apagó.
 - `auto` reproduce el comportamiento actual: perfil técnico pregunta; cualquier otro
   perfil, o ninguno, deniega.
+- `danger.mode` nunca relaja lo que el perfil del proyecto ya protege: `deny` deniega siempre;
+  `ask` solo se aplica donde el perfil preguntaría o donde no hay perfil; con perfil no técnico
+  sigue denegando.
 - Si la configuración del plugin no se puede leer, o su valor no es válido, cada guard actúa
   como con su valor por defecto (`auto` incluido) y sigue funcionando. Un error interno del
   propio guard nunca bloquea la shell: el guard deja pasar y lo registra.
@@ -116,12 +123,15 @@ el plugin expone, no sobre una interpretación de la captura.
 ## Behaviour
 
 - Main path: se abre la página del plugin y se ve una fila por ajuste con su valor actual;
-  cambiar un booleano lo guarda; el valor sigue ahí tras reiniciar OMP.
+  cambiar un booleano lo guarda; el valor sigue ahí tras reiniciar OMP. Al empezar una sesión
+  con algún guard apagado, una sola línea nombra los apagados; con todos encendidos no aparece
+  nada.
 - Edge cases:
   - Repositorio con opt-out y ajuste global encendido → el guard no actúa: manda el
     repositorio.
   - Repositorio sin opt-out y ajuste global apagado → el guard no actúa.
   - `danger.mode = auto` sin perfil de usuario → deniega, como hoy.
+  - `danger.mode = ask` con perfil no técnico → sigue denegando: el ajuste no afloja el perfil.
   - Ajuste cambiado a mitad de sesión → la sesión en curso no cambia; la siguiente sí.
 - Error paths: si la configuración no se puede leer o trae un valor inválido, el guard aplica
   su valor por defecto y sigue funcionando. Un error interno del propio guard deja pasar el
@@ -151,6 +161,10 @@ el plugin expone, no sobre una interpretación de la captura.
   confirmación y con perfil no técnico o ausente lo deniega.
 - Given `danger.mode = deny` y perfil técnico, When llega un comando destructivo, Then lo
   deniega.
+- Given `danger.mode = ask` y perfil no técnico, When llega un comando destructivo, Then lo
+  deniega igualmente.
+- Given algún guard apagado globalmente, When empieza una sesión, Then una sola línea nombra
+  los guards apagados. Given todos encendidos, Then no aparece ninguna línea.
 - Given un valor cambiado en la página, When se reinicia OMP y se vuelve a abrir la página,
   Then muestra el valor cambiado.
 - Given un ajuste cambiado a mitad de sesión, When esa misma sesión sigue evaluando comandos,
@@ -158,24 +172,36 @@ el plugin expone, no sobre una interpretación de la captura.
 
 ## Points to clarify
 
-Ninguno de estos puntos bloquea planificar: el mínimo de la spec se sostiene sin ellos. Son el
-contrato de entrada a la fase de aclaración.
+Pasada de aclaración del 2026-11-06: ninguna pregunta abierta queda pendiente. Lo que sigue son
+suposiciones validadas y lo que se dejó fuera a propósito.
 
-- **pregunta abierta** — ¿el arranque de sesión debe anunciar en una línea qué guards están
-  apagados globalmente? Apagar el guard peligroso desde la TUI no deja rastro en el repo, y hoy
-  apagarlo sí lo dejaba. No forma parte del mínimo: si la respuesta es sí, entra un criterio de
-  aceptación nuevo; si es no, se cierra aquí.
-- **suposición tomada** — `auto` es el valor por defecto y reproduce el comportamiento
-  actual. *Base:* elección del usuario en esta sesión. *Riesgo:* si el perfil cambia de
-  semántica, el defecto se mueve con él sin que nadie lo note.
+- **suposición tomada** — `auto` es el valor por defecto y reproduce el comportamiento actual.
+  *Base:* elección del usuario, validada contra el guard, que ya decide por `technical_level`.
+  *Riesgo:* si el perfil cambia de semántica, el defecto se mueve con él sin que nadie lo note.
 - **suposición tomada** — los ajustes son de la persona y la máquina, no del repositorio.
-  *Base:* reparto por dominio acordado. *Riesgo:* otra máquina arranca con todo encendido;
-  es la dirección segura, pero no la preferencia del autor.
-- **suposición tomada** — `guards.branch` cubre los dos interruptores del guard de rama
-  (trunk y aislamiento de worktree). *Base:* elección del usuario. *Riesgo:* quien quiera
-  apagar solo uno no puede.
+  *Base:* reparto por dominio acordado; el override por proyecto existe pero es manual, así que
+  no compite. *Riesgo:* otra máquina arranca con todo encendido; es la dirección segura, pero no
+  la preferencia del autor.
+- **suposición tomada** — `guards.branch` cubre los dos interruptores del guard de rama (trunk y
+  aislamiento de worktree). *Base:* ambos se leen en el mismo guard, y el usuario eligió un solo
+  interruptor. *Riesgo:* quien quiera apagar solo uno no puede.
 - **decisión diferida** — interruptores por proyecto en la UI; fuera de este ciclo.
-- **área no formulable** — qué debería ver un colaborador no técnico cuando el guard
-  peligroso está apagado en esa máquina; sé que importa y todavía no sé formularlo.
-- **pregunta abierta** — el repositorio no tiene constitución. ¿Se escribe una antes de
-  planificar, o esta spec avanza sin principios heredados y los declara aquí?
+- **área no formulable** — qué debería ver un colaborador no técnico cuando el guard peligroso
+  está apagado en esa máquina; sé que importa y todavía no sé formularlo.
+
+## Clarifications
+
+- **2026-11-06 — ¿Aviso al arrancar?** → Sí: una sola línea, solo cuando algún guard está
+  apagado. *Por qué:* apagar el guard peligroso desde la TUI no deja rastro en el repositorio, y el
+  fichero del proyecto sí lo dejaba. Entra como criterio de aceptación.
+- **2026-11-06 — `ask` contra perfil no técnico** → gana el perfil: `deny` deniega siempre, `ask`
+  solo donde el perfil preguntaría o no hay perfil. *Por qué:* el perfil vive en el proyecto y el
+  ajuste en la máquina; un ajuste global que aflojara la protección de un repo rompería el reparto
+  por dominio. Endurecer sí, aflojar no.
+- **2026-11-06 — ¿Constitución antes de planificar?** → No. La spec cita en línea los principios
+  que honra (semántica upstream intacta, un solo origen por dominio, guardas que fallan abierto).
+  La constitución se escribe cuando haya dos features que arbitrar.
+- **2026-11-06 — Suposiciones validadas**: `auto` sobre el perfil, ajustes por máquina y un solo
+  interruptor de rama. Ninguna cambió el contrato; se quedan como están.
+- **2026-11-06 — Diferido**: interruptores por proyecto en la UI. Fuera, por decisión del usuario.
+- **2026-11-06 — Sin graduar**: el caso del colaborador no técnico sigue sin enunciarse.
