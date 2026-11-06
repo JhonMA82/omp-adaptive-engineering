@@ -387,4 +387,26 @@ assert.equal(await runBash(destructive, capturing), undefined, "ask mode lets an
 assert.match(confirmReason, /danger\.mode = ask/);
 assert.doesNotMatch(confirmReason, /BLOCKED/, "the confirmation must not carry the denial text");
 
+// Remaining acceptance paths: the danger switch, a project opt-out with the guard on, and auto
+// following a non-technical profile.
+writeSettings({ "guards.danger": false });
+await startSession();
+assert.equal(await runBash(destructive, approving), undefined, "guards.danger off lets the destructive command through");
+
+const optoutRepo = makeRepo("optout");
+mkdirSync(join(optoutRepo, ".rsc"), { recursive: true });
+writeFileSync(join(optoutRepo, ".rsc", ".no-gitmoji"), "");
+writeSettings({});
+await startSession();
+assert.equal(
+  await runBash('git commit -m "no emoji"', settingsContext({ cwd: optoutRepo })),
+  undefined,
+  "a project opt-out wins over the global switch being on",
+);
+
+writeFileSync(profile, "technical_level: non-technical\n");
+writeSettings({ "danger.mode": "auto" });
+await startSession();
+assert.ok((await runBash(destructive, approving))?.block === true, "auto denies for a non-technical profile");
+
 console.log("adapter: reference battery — branch and ship switches");
