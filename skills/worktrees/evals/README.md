@@ -7,7 +7,7 @@ Grading is judgment-based — a human or a judge-agent scores against the rubric
 `worktrees` is a process skill — an **on-demand** SDD step that runs right before `implement`. It is
 judged on **routing accuracy** (does it fire only when the intent is *isolate a workspace before
 code is touched*, and stay silent on the adjacent coding/cleanup/diagnosis steps) and **capability**
-(does it run the pre-flight gate, pick branch-vs-worktree correctly, prefer the native tool, and
+(does it run the pre-flight gate, pick branch-vs-worktree correctly, use the git path, and
 hand off without writing code).
 
 ## 1. Triggering accuracy
@@ -51,14 +51,14 @@ Goal: the skill measurably improves the isolation step, not just gates it.
 2. Grade each output against the `must_include` checklist — count a point only if it is genuinely
    satisfied, not merely gestured at. The load-bearing points are: the pre-flight gate (repo +
    branch + `git status` before acting), the branch-vs-worktree decision justified by the live dev
-   server, preferring the native tool with a git fallback, a slug-matched name, and handing off to
+   server, using the exact git command, a slug-matched name, and handing off to
    `implement` without writing code.
 3. Coverage = points satisfied / total points, per run.
 4. **Pass bar:**
    - WITH-skill coverage **≥ 80%** of the rubric.
    - WITH clearly beats WITHOUT. The signature uplift to look for: the WITHOUT run tends to run a
-     bare `git checkout -b` (or even start editing on `main`), skip the dirty-tree check, ignore the
-     native tool, and blur straight into writing code; the WITH run runs the pre-flight gate, picks a
+     bare `git checkout -b` (or even start editing on `main`), skip the dirty-tree check, skip the
+     worktree, and blur straight into writing code; the WITH run runs the pre-flight gate, picks a
      *worktree* because a process is live on the current files, names it `feat/<slug>`, confirms the
      main checkout is untouched, and hands to `implement`.
 5. Run 2–3 trials per condition and average; note any rubric point the skill never produces — that is

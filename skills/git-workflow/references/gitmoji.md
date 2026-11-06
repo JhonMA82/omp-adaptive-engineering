@@ -151,7 +151,8 @@ hand-picked, which `../SKILL.md` forbids for a reason.
 
 - `gitmoji-cli` (`npm i -g gitmoji-cli`, then `gitmoji -c`) prompts for the emoji and writes the
   commit. Optional — the convention is the rule, the CLI is one way to type it.
-- On Claude Code, rsc wires a `gitmoji-guard` PreToolUse hook that denies a `git commit` whose
+- In this OMP port, the `gitmoji-guard` runs on `bash` tool calls and denies a `git commit` whose
   message has no gitmoji, with the corrected message in the refusal. It only judges messages it can
   actually read (`-m`, heredoc) and never blocks an editor commit, a `-F` file, or `--amend
-  --no-edit`. Opt out per project with `.rsc/.no-gitmoji`.
+  --no-edit`. A commit typed in an external terminal is never seen. Opt out per project with
+  `.rsc/.no-gitmoji`.

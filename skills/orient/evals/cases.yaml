@@ -45,7 +45,7 @@ should_not_trigger:
     why: "Root-cause work owned by debug; orient only closes the turn."
 
 capability:
-  - scenario: "The user just ran `npx @ericrisco/rsc add postgresdb` and says 'ya está, ¿y ahora qué?'. The profile shows technical_level non-technical. Show how orient closes the turn."
+  - scenario: "The user just installed the `postgresdb` skill through OMP's plugin manager and says 'ya está, ¿y ahora qué?'. The profile shows technical_level non-technical. Show how orient closes the turn."
     must_include:
       - "Short sentences, one idea each; no paragraph walls"
       - "Every line understandable without earlier messages (names the database, does not say 'eso' or 'lo de antes')"

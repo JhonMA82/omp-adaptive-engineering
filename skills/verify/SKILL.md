@@ -122,7 +122,7 @@ Where a criterion needs runtime proof (a page renders, a command produces output
 
 ### 4 — RECORD
 
-Write a dated verification record to `02-DOCS/wiki/sdd/verifications/<slug>-YYYY-MM-DD.md` so the project's living knowledge carries the proof, then index it in `02-DOCS/wiki/index.md` (the Knowledge map; root `CLAUDE.md` keeps only a short pointer) under the `sdd/` topic. It is an OKF v0.1 wiki article: open it with YAML frontmatter carrying a non-empty `type:`. Keep it short and factual:
+Write a dated verification record to `02-DOCS/wiki/sdd/verifications/<slug>-YYYY-MM-DD.md` so the project's living knowledge carries the proof, then index it in `02-DOCS/wiki/index.md` (the Knowledge map; the root `AGENTS.md` keeps only a short pointer) under the `sdd/` topic. It is an OKF v0.1 wiki article: open it with YAML frontmatter carrying a non-empty `type:`. Keep it short and factual:
 
 ```markdown
 ---

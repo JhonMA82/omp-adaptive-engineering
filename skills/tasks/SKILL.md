@@ -71,7 +71,7 @@ Every task is one row. A row is well-formed only when all seven fields hold:
 | **Done-check** | The **literal** command or observation that proves done. Runnable, not a feeling. See below. |
 | **Depends-on** | The task IDs that must finish first, or `—` for none. Drives the ordering and the parallel markers. |
 | **Trace** | The spec acceptance criterion this task covers (`AC3`). Every task traces to one; if it can't, it's out of scope. |
-| **Risk forecast** | Tier `0`/`1`/`2` from the paths the task expects to touch: `rsc_risk <expected paths…>`. Never guessed. |
+| **Risk forecast** | Tier `0`/`1`/`2` from the paths the task expects to touch: the `rsc_risk` tool with `paths: [<expected paths…>]`. Never guessed. |
 
 **Coverage runs both ways.** A criterion with no task, or a task with no criterion, is a defect
 `analyze` flags. The forecast budgets review; `implement` recomputes the tier on the task's actual
@@ -132,7 +132,7 @@ will execute.
    unblocked task. Default to sequential.
 5. TRACE each task to a spec criterion, and each criterion to ≥1 task.
    No trace → cut it (scope creep) or send the gap to `clarify`/`specify`.
-6. FORECAST risk per task: `rsc_risk <expected paths…>`.
+6. FORECAST risk per task with the `rsc_risk` tool: `paths: [<expected paths…>]`.
 7. ADD the closer: "all done-checks pass + verify.sh green" (stage 5).
 8. ADD a review workload + delivery forecast before implementation.
 9. APPEND the table to the plan artifact (see below). Do not start a
@@ -154,7 +154,7 @@ The task list is **not** a new document. Append it to the existing plan under a
 ```
 
 Then ensure the plan is indexed in `02-DOCS/wiki/index.md` (the Knowledge map;
-root `CLAUDE.md` keeps only a short pointer) under the `sdd/` topic — the `plan`
+the root `AGENTS.md` keeps only a short pointer) under the `sdd/` topic — the `plan`
 phase usually added the row, so confirm it points at
 `02-DOCS/wiki/sdd/plans/<slug>.md` and add it if missing. Additive only: never
 delete a user's map entry.

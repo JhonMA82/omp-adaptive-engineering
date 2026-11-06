@@ -34,12 +34,12 @@ should_not_trigger:
     why: "Bootstrapping the workspace control plane is the harness skill; nothing to do with git isolation for a feature."
 
 capability:
-  - scenario: "User says: 'I'm on main with a clean tree, the plan for the order-reservation feature (slug: order-reservation) is approved, and I'm about to implement it. My editor and a dev server are open against the current files. Set up isolation.' The agent has the worktrees skill loaded and a native worktree tool available."
+  - scenario: "User says: 'I'm on main with a clean tree, the plan for the order-reservation feature (slug: order-reservation) is approved, and I'm about to implement it. My editor and a dev server are open against the current files. Set up isolation.' The agent has the worktrees skill loaded; OMP has no session-entering worktree tool."
     must_include:
       - "Runs the pre-flight gate: confirms it's a git repo, checks current branch (main), and checks `git status --short` for tree state before creating anything"
       - "Reads technical_level from 02-DOCS/wiki/harness/user-profile.md and narrates briefly in that register (branch/dir in one line plus one line of why)"
       - "Chooses a WORKTREE over a plain branch and justifies it by the live dev server / open editor on the current files (a branch switch would yank files from the running process)"
-      - "Prefers the native worktree tool (EnterWorktree-style) for creation and session-switch, naming it for the slug (feat/order-reservation); states the git `git worktree add -b feat/order-reservation … origin/<default>` fallback if no native tool exists"
+      - "Uses the git path for creation, naming the slug: `git worktree add -b feat/order-reservation .worktrees/order-reservation origin/<default>` (OMP has no session-entering worktree tool)"
       - "Branches from an up-to-date default base (fresh origin/<default>) rather than stale local HEAD, or asks which the user wants"
       - "Names the workspace to match the spec/plan slug (feat/order-reservation) so branch, spec, and plan are traceable"
       - "Confirms the contract out loud: cwd is now the isolated branch and the main checkout is untouched"

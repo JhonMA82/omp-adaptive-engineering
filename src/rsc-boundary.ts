@@ -15,8 +15,32 @@ export interface DangerModule {
   technicalLevel(root: string): string | null;
 }
 
+export interface PeerSession {
+  target: string;
+  branch: string | null;
+  updatedAt: string;
+}
+
+export type SessionPeers = (input: { root?: string; worktreeCwd: string; sessionId?: string }) => Promise<PeerSession[]>;
+
+export interface SessionPeersModule {
+  createSessionPeers(options: {
+    pi?: unknown;
+    sessionDir?: string | null;
+    sessionId?: string | null;
+    selfFile?: string | null;
+    recentLimit?: number;
+  }): SessionPeers;
+}
+
 export interface BranchModule {
-  evaluate(options: { root: string; command: string; cwd: string; sessionId: string }): Promise<string | null>;
+  evaluate(options: {
+    root: string;
+    command: string;
+    cwd: string;
+    sessionId: string;
+    peers?: SessionPeers;
+  }): Promise<string | null>;
 }
 
 export interface ShipModule {
@@ -115,6 +139,23 @@ export interface ReviewFindingsModule {
   DEFAULT_WINDOW: number;
 }
 
+export interface StateRoots {
+  workRoot: string;
+  mainRoot: string;
+  linkedWorktree: boolean;
+}
+
+export interface StateRootsModule {
+  resolveRoots(cwd: string): StateRoots;
+  hydrateProjectDecisions(roots: StateRoots): string[];
+  stateSummary(cwd: string): {
+    worktree: string;
+    mainCheckout: string;
+    linkedWorktree: boolean;
+    projectOptOuts: string[];
+  };
+}
+
 export interface SelloToolModule {
   runSello(
     root: string,
@@ -164,6 +205,8 @@ export interface RscModules {
   selloTool: SelloToolModule;
   trunk: TrunkModule;
   settings: SettingsModule;
+  sessionPeers: SessionPeersModule;
+  stateRoots: StateRootsModule;
 }
 
 const load = (rel: string) => import(new URL(rel, import.meta.url).href) as Promise<unknown>;
@@ -171,7 +214,7 @@ const load = (rel: string) => import(new URL(rel, import.meta.url).href) as Prom
 // The dynamic imports are the untyped boundary; each cast names the contract above and is checked
 // by the ported upstream tests plus tests/adapter.test.ts.
 export async function loadRsc(): Promise<RscModules> {
-  const [danger, branch, ship, gitmoji, nudge, promptGate, sello, risk, spec, ledger, findings, selloTool, trunk, settings] =
+  const [danger, branch, ship, gitmoji, nudge, promptGate, sello, risk, spec, ledger, findings, selloTool, trunk, settings, sessionPeers, stateRoots] =
     await Promise.all([
       load("../targets/danger-guard.mjs"),
       load("../targets/branch-guard.mjs"),
@@ -187,6 +230,8 @@ export async function loadRsc(): Promise<RscModules> {
       load("./sello-tool.mjs"),
       load("../targets/trunk-policy.mjs"),
       load("../targets/plugin-settings.mjs"),
+      load("../targets/omp-session-peers.mjs"),
+      load("../targets/omp-state-roots.mjs"),
     ]);
   return {
     danger: danger as DangerModule,
@@ -203,5 +248,7 @@ export async function loadRsc(): Promise<RscModules> {
     selloTool: selloTool as SelloToolModule,
     trunk: trunk as TrunkModule,
     settings: settings as SettingsModule,
+    sessionPeers: sessionPeers as SessionPeersModule,
+    stateRoots: stateRoots as StateRootsModule,
   };
 }

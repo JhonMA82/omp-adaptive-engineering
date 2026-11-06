@@ -80,7 +80,7 @@ Same tree → the branch adds nothing; it has landed. A conflict, a different tr
 than 2.38 (no `--write-tree`) → **not proven**, so it is kept. A branch that never carried a commit
 of its own is a live workspace someone just opened, not leftovers: keep it.
 
-Never delete the default branch, the current branch of another checkout, or `rsc/knowledge`.
+Never delete the default branch or the current branch of another checkout.
 
 ## 4. Act, in this order
 

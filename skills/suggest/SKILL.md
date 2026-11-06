@@ -126,6 +126,10 @@ The upstream commands are exposed as OMP tools so the methodology below runs wit
 | `rsc main unlock/lock/status` | `/adaptive-main-unlock`, `/adaptive-main-lock`, `/adaptive-status` |
 | `rsc isolation off/on` | `/adaptive-isolation-off`, `/adaptive-isolation-on` |
 
+These are OMP tools, not executables: call the tool by name, or `read xd://<tool>` for its schema
+and `write xd://<tool>` with the JSON arguments to run it. A bash line that names `rsc_risk` or
+`rsc_sello` fails with `command not found`.
+
 The guards run automatically on `bash` tool calls. They cannot see a command typed in an external
 terminal, a direct host/browser/computer call, or shell text executed inside `eval`; see the plugin
 README for the exact coverage.

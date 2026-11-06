@@ -1,6 +1,6 @@
 ---
 name: harness
-description: "Use when governing a workspace's control plane, code or not — the `01-TOOLS/` tooling layer, the `02-DOCS/` chaos→knowledge wiki, the root Knowledge map. Audits it, migrates legacy `XX-*` folders, scaffolds provider tooling, sweeps the inbox, eats a file the person hands over (\"cómete este fichero\", \"guárdalo en la documentación\": moved into 02-DOCS/raw/ and documented), writes root CLAUDE.md/AGENTS.md. NOT the bootstrap front door (that is `init`, which hands off here)."
+description: "Use when governing a workspace's control plane, code or not — the `01-TOOLS/` tooling layer, the `02-DOCS/` chaos→knowledge wiki, the root Knowledge map. Audits it, migrates legacy `XX-*` folders, scaffolds provider tooling, sweeps the inbox, eats a file the person hands over (\"cómete este fichero\", \"guárdalo en la documentación\": moved into 02-DOCS/raw/ and documented), writes the root instruction file (`AGENTS.md` in OMP; `CLAUDE.md` only for another assistant). NOT the bootstrap front door (that is `init`, which hands off here)."
 tags: [harness, company, ops, docs, wiki, connect, tools, knowledge]
 recommends: [init, connect-tool]
 profiles: [minimal, core, full]
@@ -9,8 +9,9 @@ origin: risco
 
 # Harness — the workspace control plane
 
-> **OMP port.** OMP reads `AGENTS.md` (and project rules), not `CLAUDE.md`; write `AGENTS.md` for
-> this runtime and keep `CLAUDE.md` only for another assistant. `init` and `connect-tool` are not
+> **OMP port.** OMP reads `AGENTS.md` (and project rules), not `CLAUDE.md`. `AGENTS.md` is the root
+> instruction file this skill maintains; write `CLAUDE.md` only when the project also serves another
+> assistant, and never create it by default. `init` and `connect-tool` are not
 > bundled with this plugin: first contact and missing capabilities are handled by the `suggest`
 > skill and OMP's plugin manager. This skill still owns the `01-TOOLS/` and `02-DOCS/` conventions.
 
@@ -26,8 +27,9 @@ The **harness** is the control plane of a workspace. A workspace need not be cod
   discovering un-ingested documents anywhere in the workspace, bounded by `.rscignore` (baseline:
   `references/ingest-ignore-defaults.md`) and de-duplicated through the `wiki/.ingested.json`
   ledger. **Worklog**: every meaningful session of
-  work is itself a raw source in `raw/worklog/`, captured on `PreCompact`/`SessionEnd`, at a commit
-  milestone, or by the daily curation pass.
+  work is itself a raw source in `raw/worklog/`, captured when the agent runs the worklog pass (on
+  request, at a commit milestone, or by an external scheduler the project configured). The plugin
+  installs no `PreCompact`/`SessionEnd` hooks.
 
   Ingest relocates, never deletes: a loose file at the workspace root moves into `raw/`; a file
   inside a folder the user maintains is copied, and consolidating that folder needs explicit consent.
@@ -56,13 +58,14 @@ The **harness** is the control plane of a workspace. A workspace need not be cod
 
   It compounds on its own: every Ingest, Sweep and Query triggers a Maintenance Pass (lint, score
   recomputation, gap detection, Related sweep), a Micro-Improve runs every N interactions, and Deep
-  Improve runs on request or on the daily schedule (`references/daily-curation-automation.md` — on
-  Claude Code, wire it via the `schedule` skill). Protocol → `references/wiki-protocol.md`;
+  Improve runs on request, or on a schedule the project wires externally
+  (`references/daily-curation-automation.md` describes the cadence). This port installs no
+  scheduler. Protocol → `references/wiki-protocol.md`;
   formats → `references/ingest-formats.md`; capture → `references/wiki-worklog-template.md`;
   vault → `references/obsidian-scaffolding.md`.
-- **The Knowledge map** — the `## Knowledge map` section of the root `CLAUDE.md` that indexes the wiki (including the `harness/` topic) and is read by every other skill before it works in its area.
+- **The Knowledge map** — the `## Knowledge map` section of the root instruction file (`AGENTS.md` in OMP; `CLAUDE.md` when the project keeps one for another assistant) that indexes the wiki (including the `harness/` topic) and is read by every other skill before it works in its area.
 
-`harness` is the **protagonist concept**. `init` is the bootstrap front door — it gauges the user, drafts the profile, and hands off the first scaffold. THIS skill (`harness`) is the **ongoing control**: it audits, migrates, scaffolds, sweeps the inbox, and keeps the wiki, the tooling and the Knowledge map honest over the life of the workspace. It also generates root `CLAUDE.md` and `AGENTS.md`, and migrates legacy `XX-*` numbered folders into the canonical layout.
+`harness` is the **protagonist concept**. `init` is the bootstrap front door — it gauges the user, drafts the profile, and hands off the first scaffold. THIS skill (`harness`) is the **ongoing control**: it audits, migrates, scaffolds, sweeps the inbox, and keeps the wiki, the tooling and the Knowledge map honest over the life of the workspace. It also generates the root `AGENTS.md` (and `CLAUDE.md` only when the project serves another assistant), and migrates legacy `XX-*` numbered folders into the canonical layout.
 
 ## How the harness talks to the user
 
@@ -72,7 +75,7 @@ the one `orient` voice: short sentences, and every answer understandable on its 
 → use analogies, and let `init` run first contact (it owns the one register question; do not re-ask
 it here).
 
-Two files carry the state, both indexed from the root `CLAUDE.md` Knowledge map under `harness/`:
+Two files carry the state, both indexed from the root instruction file's Knowledge map under `harness/`:
 `user-profile.md` for the living portrait of the user, and `decisions.md` as an append-only log —
 date, requirements gathered, options presented, choice, why. Log every significant decision you take.
 
@@ -167,12 +170,12 @@ The user must respond with explicit approval. Accept ONLY these forms:
 Execute in this exact order. Each step writes to disk; abort and report on first error.
 
 1. **Root files.**
-   - If `CLAUDE.md` does not exist: render `references/claude-md-template.md` with the scan data and write it.
-   - If `CLAUDE.md` exists: read it, compute a section-level diff against the template, and apply ONLY additive merges. Never delete user content. Never overwrite a section the user has customized. Append missing sections at the end with an `<!-- added by harness YYYY-MM-DD -->` marker.
-   - Same logic for `AGENTS.md`, rendered from `references/agents-md-template.md`.
+   - **`AGENTS.md` is the file OMP reads; it is the one this step always maintains.** If it does not exist: render `references/agents-md-template.md` with the scan data and write it.
+   - If `AGENTS.md` exists: read it, compute a section-level diff against the template, and apply ONLY additive merges. Never delete user content. Never overwrite a section the user has customized. Append missing sections at the end with an `<!-- added by harness YYYY-MM-DD -->` marker.
+   - `CLAUDE.md` is optional compatibility: render `references/claude-md-template.md` and write it **only** when the project already has one or the person says another assistant uses this workspace. Same additive-merge rule. Do not create it by default.
 2. **Create `01-TOOLS/` skeleton.**
    - Create `01-TOOLS/` directory.
-   - Copy `assets/_TEMPLATE/` to `01-TOOLS/_TEMPLATE/`. The asset ships its ignore rules as `gitignore` (no leading dot, because npm never packages a `.gitignore`) and it must land as `.gitignore`; the installer already does this on every apply, so normally you will find the directory built. This template is **generic boilerplate with placeholders (`<NOMBRE_TOOL>`, `<TOOL>_API_KEY`)**. `connect-tool` skill copies it when the user asks for a tool NOT in the catalog. The skill itself does NOT use `_TEMPLATE/` to generate the detected tools — those come from `providers.yaml`.
+   - Copy `assets/_TEMPLATE/` to `01-TOOLS/_TEMPLATE/` **by hand**; this port ships no installer. The asset ships its ignore rules as `gitignore` (no leading dot, because npm never packages a `.gitignore`) and it must land as `.gitignore`. This template is **generic boilerplate with placeholders (`<NOMBRE_TOOL>`, `<TOOL>_API_KEY`)**. The upstream `connect-tool` handoff is not bundled: when the person asks for a tool NOT in the catalog, copy the template yourself. The skill itself does NOT use `_TEMPLATE/` to generate the detected tools — those come from `providers.yaml`.
 3. **Per detected tool** (in catalog order):
    - Create `01-TOOLS/<ID>/`.
    - Write every file from the provider entry's `files:` map verbatim (replacing template variables: `{{TOOL_ID}}`, `{{DASHBOARD_URL}}`, etc.).
@@ -266,30 +269,30 @@ goals. OMP discovers skills natively; there is no `rsc consult`/`rsc add` here.
 2. **Confirm, then let the person install.** Show the shortlist with a one-line *why* each (in their register) and name what is missing. The person installs it through OMP's plugin manager; the agent never installs a plugin or claims one is installed without observing it.
 3. **Flag the new session.** New capabilities load at session start — tell the user to open a **new session** (or reload) in this folder for them to activate. Log the adopted set in `02-DOCS/wiki/harness/decisions.md`.
 
-## Keep CLAUDE.md lean — the index lives in the wiki
+## Keep the root instruction file lean — the index lives in the wiki
 
-Root `CLAUDE.md` is read on **every** turn, so every line is a permanent context tax (2026 best
+The root instruction file (`AGENTS.md` in OMP; `CLAUDE.md` when the project keeps one) is read on **every** turn, so every line is a permanent context tax (2026 best
 practice: keep it **under ~200 lines**; beyond that, adherence rots as the rules that matter get
 diluted by an index nobody needs in context). The biggest growth vector is the `## Knowledge map` —
 a row per wiki article, appended by many skills, forever.
 
 **The rule:** the **full** Knowledge map lives in `02-DOCS/wiki/index.md` (loaded on demand, grows
-freely). Root `CLAUDE.md`'s `## Knowledge map` is a **short pointer** — only the read-first entries
+freely). The root file's `## Knowledge map` is a **short pointer** — only the read-first entries
 (`harness/user-profile.md`, `sdd/constitution.md`) plus "full index → `02-DOCS/wiki/index.md`".
 
-**Offload when it bloats (a move, never a trim — no info lost):** when `CLAUDE.md` passes ~200 lines
-(the SessionStart hook nudges you) or its `## Knowledge map` has grown past the read-first entries:
+**Offload when it bloats (a move, never a trim — no info lost):** when the root instruction file passes ~200 lines
+or its `## Knowledge map` has grown past the read-first entries:
 
 1. Open `02-DOCS/wiki/index.md` (create it if absent).
-2. **Move** every Knowledge-map row beyond the read-first entries from `CLAUDE.md` into
+2. **Move** every Knowledge-map row beyond the read-first entries from the root instruction file into
    `02-DOCS/wiki/index.md`, merging — don't duplicate, don't delete.
-3. Leave `CLAUDE.md`'s `## Knowledge map` as the short pointer above.
+3. Leave the root file's `## Knowledge map` as the short pointer above.
 4. Same for any other section overgrown into an index (e.g. a huge tool table): detail to the wiki,
    pointer stays.
 
-From then on, **new index entries go to `02-DOCS/wiki/index.md`**, not `CLAUDE.md`. This is additive
+From then on, **new index entries go to `02-DOCS/wiki/index.md`**, not the root instruction file. This is additive
 and reversible; it honors the "never delete user content" rule (you relocate it, with a pointer).
-Opt out of the size nudge with `.rsc/.no-claudemd-check`.
+Opt out of the size nudge with `.rsc/.no-claudemd-check` (upstream switch name; it covers whichever root file the project uses).
 
 ## Invariants
 

@@ -48,9 +48,9 @@ status: in-progress
 ## Next            — the single next step, so an interruption costs nothing
 ```
 
-The frontmatter says whose work it is, so «¿qué ha hecho cada uno?» has an answer. You never close
-it by hand: when the branch lands on the default branch, rsc's post-merge hook sets `status: done`
-and replaces Next with where and when it merged (on a closed default branch, via `rsc/knowledge`).
+The frontmatter says whose work it is, so «¿qué ha hecho cada uno?» has an answer. **This port does
+not ship upstream's post-merge hook**, so close it by hand: when the branch lands on the default
+branch, set `status: done` and replace Next with where and when it merged.
 
 No decision journal, no phase records, no approvals. If a decision was meaningful, one line of
 rationale goes next to the task it belongs to.
@@ -66,7 +66,8 @@ The lane inherits ASDD's per-task loop, cut to its floor:
 
 1. **Self-check** — run the change's own check and record the output under Evidence.
 2. **`rsc_risk`** — the tier of what changed (same path table as the sello; works
-   with it off).
+   with it off). It is a discoverable OMP tool: `read xd://rsc_risk` shows its schema and
+   `write xd://rsc_risk` with the JSON arguments runs it; it is not a shell command.
 3. **Tier ≥ 1 → one fresh-context reviewer** (`skill://review`, per-task mode). Tier 0 → none.
 4. **Mandatory controls** — tests, build, the security scan the project has. What did not run is
    written «not executed», never left blank.
@@ -74,7 +75,7 @@ The lane inherits ASDD's per-task loop, cut to its floor:
 **Escalate to `asdd`** when `rsc_risk` says **tier 2**, or when the change contradicts a decision
 already recorded in `decisions.md`: the feature document becomes its spec input, as below.
 
-**This escalation is enforced, not advised.** A tier-2 branch cannot be pushed or opened as a PR until a spec linked to it (`branch: <name>` in its frontmatter) passes `rsc_spec_gate`. Time pressure does not change the lane: escalate the moment `rsc_risk` says tier 2, before writing more code.
+**This escalation is enforced, not advised.** A tier-2 branch cannot be pushed or opened as a PR until a spec linked to it (`branch: <name>` in its frontmatter) passes the `rsc_spec_gate` tool. Time pressure does not change the lane: escalate the moment `rsc_risk` says tier 2, before writing more code.
 
 ## Isolation
 
@@ -90,12 +91,13 @@ says which on every turn) — never a branch opened on your own:
   intent and closes with a pull request. Unlocking is `/adaptive-main-unlock`; never without that answer.
 - **Docs, wiki or config only** → no question, no branch.
 - **Another session working in this same folder** → a worktree in `.worktrees/<branch>/` at the root you work in (never inside a project folder), never a
-  branch switch under the other session. Not a question: rsc tells you when that is the case.
+  branch switch under the other session. Not a question when the evidence is real — the branch guard
+  reports the other session, or the person says so. Do not claim the guard saw it if it did not.
 
 A worktree only when another session is there: alone, setting one up costs more than it protects.
 
-`skill://worktrees` owns the isolation mechanics if you need them. Once the branch lands, the
-cleanup is automatic and you do not run anything.
+`skill://worktrees` owns the isolation mechanics if you need them. Once the branch lands, retire the
+worktree with its manual checks: this port ships no automatic cleanup.
 
 ## Growing out of the lane
 

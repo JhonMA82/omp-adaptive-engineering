@@ -150,21 +150,18 @@ contract; the concrete names are yours to edit.
 
 ## The `developer` subagent (the installed implementation worker)
 
-rsc installs a **`developer`** subagent into every assistant that supports file-based agents
-(Claude Code `.claude/agents/`, Cursor, OpenCode, Gemini, Copilot, Junie, Kiro, Codex) when the
-harness is installed. It is the concrete embodiment of "run the fan-out on a smaller model":
+This plugin ships a **`developer`** subagent in `agents/developer.md`. OMP discovers it natively.
 
-- It is pinned to the **balanced** tier — **Sonnet** for Anthropic-backed tools, the provider's
-  mid model elsewhere (Gemini Flash, GPT-mini). It is **never** `light`/Haiku — that tier is too
-  weak to build with. The floor for implementation is balanced.
-- The tier is chosen at **onboarding** (`init`, Step 4): balanced (default) or heavy. It is stored
-  in `.rsc/developer.json` and the installer writes the per-target agent file with the resolved
-  model on every (re)install/sync. If onboarding never asks, the install-time default is balanced.
-- `implement` and `parallel` **dispatch implementation/fan-out work to this agent**, so the
-  session model orchestrates while the cheaper-but-capable model does the bulk of the typing.
-- On assistants without file-based agents (Amp, Zed, Windsurf, Cline, Roo, Continue, Aider, Jules,
-  Antigravity), there is no agent file — the developer tier is advisory there, like the rest of
-  routing. The per-target model id is an editable default (see the provider table above).
+- **No model pin.** Upstream pinned the agent to the balanced tier and let onboarding choose it;
+  the port removes that pin so OMP's model selection applies. With routing off, a dispatch inherits
+  the session model — that is intended, not a missing cap.
+- **When routing is on**, resolve the phase/unit tier through `models.tiers` and pass the resulting
+  model on the task dispatch. OMP's `task` tool takes a `model` per dispatch; if the installed
+  version cannot switch, say so instead of claiming a switch.
+- `implement` and `parallel` still **dispatch implementation/fan-out work to this agent**, so the
+  session model orchestrates while the worker keeps a fresh context.
+- There is no `.rsc/developer.json` and no installer in this port: the agent file is the one fact,
+  and the per-dispatch model is the only lever.
 
 ## Result-envelope `model` field
 

@@ -1,6 +1,6 @@
 ---
 name: worktrees
-description: "Use when work is about to become commits and needs isolation first — check the tree state, then branch or cut a git worktree off a clean base (native EnterWorktree first, git fallback) so implement never runs on main. NOT what may run concurrently inside those workspaces (that is `parallel`), NOT the merge/cleanup after (that is `ship`)."
+description: "Use when work is about to become commits and needs isolation first — check the tree state, then branch or cut a git worktree off a clean base (git is the path in this port) so implement never runs on main. NOT what may run concurrently inside those workspaces (that is `parallel`), NOT the merge/cleanup after (that is `ship`)."
 tags: [git, worktree, isolation]
 recommends: []
 profiles: [core, full]
@@ -44,7 +44,7 @@ Both isolate history. A worktree also isolates the *filesystem*. Pick by what's 
 | You'll run two streams of work at once (see the parallel pattern) | **worktree** | Each stream gets its own directory; no stash-juggling, no checkout thrash. |
 | The current tree is dirty and the user wants both the WIP and the new work | **worktree** | Stash-and-switch risks losing the WIP; a worktree sidesteps the stash entirely. |
 | You're an agent that may keep the main session running elsewhere | **worktree** | Filesystem isolation is the whole point — the parent session keeps its files. |
-| **Another session is working in this same folder** (rsc says so on each message) | **worktree — mandatory** | Switching branches would change its files under it; rsc's branch guard denies the switch. Tell the person that `.worktrees/<branch>/` is where the project now runs. Off for the project: `/adaptive-isolation-off`. |
+| **Another session is working in this same folder** (the branch guard reports it, or the person says so) | **worktree — mandatory** | Switching branches would change its files under it; the branch guard denies the switch. Tell the person that `.worktrees/<branch>/` is where the project now runs. Off for the project: `/adaptive-isolation-off`. Never claim the guard detected it when the evidence came from the person. |
 
 When in doubt, prefer a **worktree**: it is the strictly stronger isolation and the cost is one
 extra directory. The rest of this skill assumes a worktree; the branch path is the degenerate case
@@ -79,33 +79,30 @@ Run this in order. Each check prevents a class of "lost work" you can't easily u
    `02-DOCS/wiki/sdd/plans/<slug>.md` all line up and are trivially traceable. A change that is not
    a feature takes the type that fits — `fix/<slug>`, `docs/<slug>`, `chore/<slug>` — from the same
    Conventional Commits vocabulary the commit guard already enforces here. **The prefix is load
-   bearing**: the automatic cleanup uses it, with the location, as the two signals that say a
+   bearing**: the manual cleanup uses it, with the location, as the two signals that say a
    worktree is ours to remove. A name outside that vocabulary is never swept for you.
 
 Only once the tree state is understood and the user's WIP is accounted for do you create anything.
 
-## Creating the workspace — native first, git fallback
+## Creating the workspace — git is the path
 
-**Prefer the native worktree tool when it's available in your environment.** An `EnterWorktree`-style
-tool typically creates an isolated worktree (often under something like `.claude/worktrees/`, though
-the exact location is tool-dependent), switches the session into it, and tracks it for clean exit —
-which is exactly the lifecycle this skill wants, with no manual path management. The git path is the
-universal fallback and is exactly what the native tool does under the hood.
+**OMP has no session-entering worktree tool.** Its `omp worktree` CLI lists, adds and clears git
+worktrees, but it does not move this session into the new directory, and this port does not add one.
+The lifecycle this skill wants is the one git gives:
 
 | You have… | Create | Leave intact | Discard |
 | --- | --- | --- | --- |
-| A native worktree tool (`EnterWorktree`-style) | enter, named for the feature slug; the session's working directory moves into the isolated checkout | exit with `keep` — worktree and branch stay on disk for later | exit with `remove` — deletes both when the work is done or abandoned |
-| Plain git only | `git worktree add -b feat/<slug> .worktrees/<slug>` | leave the dir; it persists until its work lands | `git worktree remove` + `git branch -d` |
+| The git path (this port) | `git worktree add -b feat/<slug> .worktrees/<slug>` | leave the dir; it persists until its work lands | `git worktree remove` + `git branch -d` |
+| OMP task isolation (a subagent only) | OMP creates and owns its own worktree outside this checkout | it stays until OMP tears it down or you retire it | OMP's own lifecycle; check `git worktree list` first |
 
 Removing a worktree that holds uncommitted or unmerged work must be an explicit, confirmed choice,
 never a silent cleanup: refuse the silent path and confirm the discard with the user, quoting what
 would be lost.
 
-**You do not have to remember to clean up.** Once the work lands on the trunk, a `post-merge` hook
-retires the worktree and its branch on its own — it removes only what the reaper already classifies
-as safe, and anything holding unsaved work is refused exactly as it is above. Nothing to run, and
-nothing to remember: the previous version of this skill asked an agent to remember, and it was
-skipped on both features that reached that point.
+**This port ships no post-merge reaper.** Upstream retires the worktree and its branch through a
+hook; Adaptive Engineering does not, so nothing cleans up behind you. Once the work lands, run the
+manual inventory and removal in *Cleanup is the default* below. Saying "the hook will do it" here
+would strand the directory.
 
 ```bash
 # from the repo root, default branch up to date
@@ -115,7 +112,7 @@ git worktree add -b feat/<slug> .worktrees/<slug> origin/<default-branch>
 ```
 
 **At the root you work in, always — never inside a project folder, never a sibling.** The root is
-the folder holding `.rsc.json`. For the repo at that root the worktree is `.worktrees/<slug>`. For a
+the folder holding the project's `.rsc/` or `.rsc.json`. For the repo at that root the worktree is `.worktrees/<slug>`. For a
 project that lives in a folder under it (a workspace with `03-PROJECTS/<p>/`), it is
 `<root>/.worktrees/<p>-<slug>`, and the path is written absolute — a relative one resolves inside
 the project, which is how they ended up there:
@@ -128,6 +125,13 @@ git -C 03-PROJECTS/<p> worktree add -b feat/<slug> <root>/.worktrees/<p>-<slug> 
 A worktree at the root is a fresh checkout with nothing above it to borrow from: install its
 dependencies inside it (`npm ci`, `uv sync`, …) before running anything. Inside the project, a
 missing `node_modules` was silently taken from the parent; at the root it fails loudly instead.
+
+**State in a worktree.** The checkout you work in keeps its own `.rsc/`: the sello, the review
+ledger, the nudge journal and the memory belong to the checkout that produced them. Project opt-outs
+(the `.rsc/.no-*` markers and `.rsc.json`'s `optOuts`) travel the other way: a fresh worktree
+inherits them once, when it has no `.rsc/` yet, and never writes back to the main checkout. After
+that first session its own `.rsc/` is authoritative — deleting a marker there re-arms that guard
+for this worktree only. `/adaptive-status` prints both roots when you need to check which is which.
 
 rsc's branch guard denies any other place, with the right command in its message. `.worktrees/` is
 already gitignored at the root, and a sibling directory would sit outside the tree, survive every
@@ -171,8 +175,9 @@ Three things have to hold before a worktree is retired without asking, and each 
 
 Anything else is reported with the reason and the way out. A refusal you cannot act on is not safety.
 
-**The native tool owns its own lifecycle.** If you isolated via a native OMP worktree tool, exit
-through that tool's `remove`/`keep`; the manual git checks are for worktrees git alone knows about.
+**OMP task isolation owns its own lifecycle.** If a subagent isolated through `task`, its worktree
+is OMP-managed; list it (`git worktree list`, `omp worktree list`) and let OMP tear it down. The
+manual git checks below are for worktrees git alone knows about.
 
 **Removing it safely:** confirm it is a linked worktree (`git rev-parse --git-dir` ≠
 `--git-common-dir`), rule out a submodule (`git rev-parse --show-superproject-working-tree` must be
@@ -202,7 +207,7 @@ wish for brevity removes the check before risking someone's WIP.
 | "There's uncommitted WIP, I'll stash it and switch" | A worktree avoids the stash entirely and can't drop it. Use a worktree; if you must stash, confirm with the user and name the stash. |
 | "I'll branch off local HEAD, fetching is slow" | Stale base = merge conflicts you pay for later. Branch off an up-to-date `origin/<default>` unless the user wants HEAD. |
 | "The worktree's dirty but I'll `remove --force` to clean up" | Force-removing a dirty/unmerged worktree throws away work irreversibly. Resolve or confirm explicitly first; never silent-force. |
-| "I'll name it `wip` / `temp` / `branch2`" | An untraceable name divorces the branch from its spec/plan, and the automatic cleanup will not claim it. Use `<type>/<slug>` — `feat/` for a feature, `fix/`, `docs/`, `chore/` for the rest. |
+| "I'll name it `wip` / `temp` / `branch2`" | An untraceable name divorces the branch from its spec/plan, and the manual cleanup will not claim it. Use `<type>/<slug>` — `feat/` for a feature, `fix/`, `docs/`, `chore/` for the rest. |
 | "I'll create the worktree AND start writing code right here" | This skill only isolates. Hand a clean isolated workspace to `implement`; don't blur the two steps. |
 | "Already on a feature branch, I'll make a worktree anyway" | Redundant isolation is just clutter. If the current branch is already isolated and clean, say so and proceed. |
 | "I'll record the worktree path into 02-DOCS so it's tracked" | Isolation is plumbing, not knowledge. No artifact; the branch name traces it. Don't pollute the wiki. |

@@ -1,8 +1,12 @@
 skill: suggest
 
+# OMP port: the scenarios are upstream; the install action is adapted. The person installs through
+# OMP's plugin manager, the agent never installs for them, and availability comes from the session's
+# discovered skill list. No `npx @ericrisco/rsc` command runs here; see evals/README.md.
+
 # The always-on detector. It fires when the current task would clearly benefit
-# from an rsc skill that is NOT yet installed, names it, and (with confirmation)
-# runs `npx @ericrisco/rsc add <id>`. It should stay silent for trivial work and defer to a
+# from an rsc skill that is NOT yet available, names it, and (with confirmation)
+# asks the person to install it. It should stay silent for trivial work and defer to a
 # skill that already owns the task.
 
 should_trigger:
@@ -16,7 +20,7 @@ should_trigger:
     why: "Mid-conversation creation/marketing intent — the detector should consult the catalog and propose the first missing email or marketing skill before writing generic copy."
 
   - prompt: "Ayúdame a montar la tabla de pedidos en la base de datos."
-    why: "A database task with no DB skill present — the detector should propose `npx @ericrisco/rsc add postgresdb` before diving in."
+    why: "A database task with no DB skill present — the detector should propose installing `postgresdb` before diving in."
 
   - prompt: "Quiero publicar mi web online, creo que con Docker."
     why: "A deployment task with no deploy skill present — propose installing `deployment`."
@@ -55,27 +59,27 @@ capability:
     must_include:
       - "Names the missing skill in plain language ('para esto va bien `postgresdb`, que aún no tienes')"
       - "Asks a single short confirmation (sí/no) before doing anything — never auto-installs"
-      - "On confirmation, runs `npx @ericrisco/rsc add postgresdb` via Bash, then continues the original task"
-      - "Checks what is already installed (npx @ericrisco/rsc list) and never proposes a skill the user already has"
+      - "On confirmation, tells the person to install `postgresdb` through OMP's plugin manager, then continues the original task"
+      - "Checks the session's discovered skill list and never proposes a skill already available"
       - "Makes at most one suggestion and does not interrupt the flow for nice-to-haves"
 
   - scenario: "Mid-conversation, after base install, the user says 'quiero montar una pagina web para vender cursos online'. `init`, `harness`, `orient`, `suggest`, and `unslop` are already installed; `nextjs` is not. Show how rsc-suggest behaves."
     must_include:
       - "Treats the message as in-agent capability intent, not as a CLI-only consult task"
-      - "Runs `npx @ericrisco/rsc catalog --available` to see the not-installed skills (already excludes installed `init`/`harness`)"
-      - "Picks the best-fit skill by MEANING from the catalog, not by relying on lexical `consult` ranking"
+      - "Reads the session's discovered skill list to see what is not available (it already excludes `init`/`harness`)"
+      - "Picks the best-fit skill by MEANING from what is available, not by lexical ranking"
       - "Names `nextjs` as the missing useful skill for the website work"
       - "Asks one short confirmation before installing and does not auto-install"
-      - "On confirmation, runs `npx @ericrisco/rsc add nextjs`, then resumes the original website task"
+      - "On confirmation, tells the person to install `nextjs` through OMP's plugin manager, then resumes the original website task"
 
   - scenario: "Mid-conversation, the user says 'Automatiza el flujo de leads desde el formulario hasta mi CRM'. The base skills are installed, but `automation-flows` and CRM/connector skills are not. Show how rsc-suggest behaves."
     must_include:
       - "Treats the message as in-agent capability intent for automation/integration, not only as a coding task"
-      - "Runs `npx @ericrisco/rsc catalog --available` to see the not-installed skills"
-      - "Picks the best-fit missing automation/connector skill by MEANING (not by lexical `consult` ranking, which may return nothing)"
+      - "Reads the session's discovered skill list to see the not-available skills"
+      - "Picks the best-fit missing automation/connector skill by MEANING (not by lexical ranking, which may return nothing)"
       - "Names that one missing automation/connector skill"
       - "Asks one short confirmation before installing and does not auto-install"
-      - "On confirmation, runs `npx @ericrisco/rsc add <id>` for that one missing skill, then resumes the automation task"
+      - "On confirmation, tells the person to install that one missing skill through OMP's plugin manager, then resumes the automation task"
 
   - scenario: "In a workspace with `02-DOCS/wiki/`, the user says 'recuerda que toda la actividad, también la de Andorra, va por una sola sociedad, Nadsan 2006 S.L.'. Show where rsc-suggest puts it."
     must_include:
