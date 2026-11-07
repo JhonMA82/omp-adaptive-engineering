@@ -25,20 +25,20 @@ No workflow engine, scheduler, database, telemetry, second plugin loader or para
 ## Install
 
 ```bash
-omp plugin link ~/Dev/omp-adaptive-engineering
-# or: omp plugin install ~/Dev/omp-adaptive-engineering
+omp plugin link ~/Dev/omp-rsc-harness
+# or: omp plugin install ~/Dev/omp-rsc-harness
 omp plugin list
 ```
 
-The link writes a symlink under `~/.omp/plugins/node_modules/adaptive-engineering` and an entry in
+The link writes a symlink under `~/.omp/plugins/node_modules/omp-rsc-harness` and an entry in
 `~/.omp/plugins/omp-plugins.lock.json`. It does not modify OMP’s source.
 
 Activation changes apply to **new sessions**. A session already open keeps what it loaded.
 
 ```bash
-omp plugin disable adaptive-engineering   # guards, tools, commands, skills and agents disappear
-omp plugin enable  adaptive-engineering   # they return on the next session
-omp plugin uninstall adaptive-engineering # remove the link and plugin state
+omp plugin disable omp-rsc-harness   # guards, tools, commands, skills and agents disappear
+omp plugin enable  omp-rsc-harness   # they return on the next session
+omp plugin uninstall omp-rsc-harness # remove the link and plugin state
 ```
 
 The plugin is project-agnostic. It resolves the project root inside the session’s checkout: the
@@ -92,8 +92,8 @@ the message.
 ## Settings
 
 The plugin declares five settings in `package.json#omp.settings`, so OMP paints them in
-**Settings → Plugins → adaptive-engineering** and persists them in
-`~/.omp/plugins/omp-plugins.lock.json` under `settings["adaptive-engineering"]`.
+**Settings → Plugins → omp-rsc-harness** and persists them in
+`~/.omp/plugins/omp-plugins.lock.json` under `settings["omp-rsc-harness"]`.
 
 | Key | Type | Default | Effect |
 | --- | --- | --- | --- |
@@ -358,8 +358,8 @@ Real OMP sessions, not the simulated API.
 - **Subagents:** a `task` subagent's gitmoji-less commit was blocked by the same handler; its
   innocuous `echo ok` passed; a technical-profile `--no-verify` commit was blocked by the danger
   guard because the subagent has no approval UI.
-- **Lifecycle:** `omp plugin disable adaptive-engineering` → a new session ran the destructive
-  command with no harness intervention; `omp plugin enable adaptive-engineering` → the next session
+- **Lifecycle:** `omp plugin disable omp-rsc-harness` → a new session ran the destructive
+  command with no harness intervention; `omp plugin enable omp-rsc-harness` → the next session
   blocked it again. `omp plugin list --json` ended with `enabled: true`, the lock still holds only
   the plugin entry (`settings: {}`), and the repository has no plugin residue. This session's
   discovered list contains the 28 skills and the 5 agents, which is OMP's own discovery reporting

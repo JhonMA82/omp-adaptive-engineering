@@ -1,5 +1,5 @@
 {
-  "name": "adaptive-engineering",
+  "name": "omp-rsc-harness",
   "version": "0.2.0",
   "private": true,
   "description": "RSC Harness ported to Oh My Pi: deterministic guards, risk/spec/review gates and the original engineering skills, adapted at the ExtensionAPI boundary.",

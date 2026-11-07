@@ -34,3 +34,4 @@ Feature documents for small authorised changes.
 | [FTD — Checklist vivo en la TUI](ftd/todo-progress.md) | El flujo espeja su tabla de tareas en la herramienta `todo` | 2026-11-06 | — |
 | [FTD — Pase de cierre](ftd/closing-pass.md) | Regla B con leases de OMP, defectos del adaptador, skills y README alineados | 2026-11-06 | — |
 | [FTD — Segundo pase de cierre](ftd/closing-pass-2.md) | Contrato `.rsc` en worktrees, typecheck y validación real con OMP 18.17.0 | 2026-11-06 | — |
+| [FTD — Renombrar el repositorio](ftd/repo-rename.md) | La identidad pasa a `omp-rsc-harness` en GitHub, manifiesto, lockfile y docs vivos | 2026-11-06 | — |

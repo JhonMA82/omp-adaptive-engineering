@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "adaptive-engineering",
+      "name": "omp-rsc-harness",
       "devDependencies": {
         "@oh-my-pi/pi-coding-agent": "18.17.0",
         "@types/node": "26.0.0",

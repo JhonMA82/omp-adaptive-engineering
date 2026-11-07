@@ -23,7 +23,7 @@ function lockAt(dir, value) {
 }
 
 function pluginLock(settings) {
-  return { plugins: {}, settings: { "adaptive-engineering": settings } };
+  return { plugins: {}, settings: { "omp-rsc-harness": settings } };
 }
 
 test("resolveLockPath finds the lock under <agentDir>/plugins", () => {
@@ -92,7 +92,7 @@ test("readSettings reads the danger mode", () => {
 test("a project override wins over the global lock", () => {
   const lockPath = lockAt(tmp(), pluginLock({ "guards.danger": true }));
   const project = join(tmp(), "plugin-overrides.json");
-  writeFileSync(project, JSON.stringify({ settings: { "adaptive-engineering": { "guards.danger": false } } }));
+  writeFileSync(project, JSON.stringify({ settings: { "omp-rsc-harness": { "guards.danger": false } } }));
 
   const settings = readSettings({ lockPath, projectPaths: [project] });
   assert.equal(settings.guards.danger, false);

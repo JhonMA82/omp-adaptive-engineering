@@ -66,7 +66,7 @@ aplica en la sesión siguiente; leer por llamada lo aplicaría al instante. Adem
 camino caliente de `tool_call`.
 
 **Ruta del lock**: dos candidatas derivadas de `getAgentDir()` de OMP, la primera existente gana.
-Si ninguna existe, defaults. Probado que `omp plugin config list adaptive-engineering --json`
+Si ninguna existe, defaults. Probado que `omp plugin config list omp-rsc-harness --json`
 devuelve hoy `{settings:{}, schema:{}}`, así que la superficie del manifiesto es alcanzable.
 
 **Adaptación upstream**: `danger-guard.mjs` exporta `technicalLevel` para distinguir «sin perfil» de

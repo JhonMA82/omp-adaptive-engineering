@@ -2,7 +2,7 @@
  * Plugin settings: the four guard switches and the danger mode.
  *
  * OMP declares them in `package.json#omp.settings`, paints them in Settings → Plugins and persists
- * them in `<plugins>/omp-plugins.lock.json` under `settings["adaptive-engineering"]`; a project can
+ * them in `<plugins>/omp-plugins.lock.json` under `settings["omp-rsc-harness"]`; a project can
  * override key by key in `<root>/.omp/plugin-overrides.json`. OMP exposes no accessor to the
  * extension, so this module reads the same files OMP writes.
  *
@@ -12,7 +12,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
-export const PLUGIN_NAME = "adaptive-engineering";
+export const PLUGIN_NAME = "omp-rsc-harness";
 export const GUARD_NAMES = ["danger", "branch", "ship", "gitmoji"];
 export const DANGER_MODES = ["auto", "ask", "deny"];
 

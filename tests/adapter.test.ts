@@ -247,7 +247,7 @@ const settingsContext = (overrides: Partial<FakeContext> = {}): FakeContext => (
 const writeSettings = (values: Record<string, unknown>) =>
   writeFileSync(
     settingsLock,
-    JSON.stringify({ plugins: {}, settings: { "adaptive-engineering": values } }),
+    JSON.stringify({ plugins: {}, settings: { "omp-rsc-harness": values } }),
   );
 
 const startSession = async () => {
